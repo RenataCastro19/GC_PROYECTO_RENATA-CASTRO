@@ -1,6 +1,6 @@
 /*
 COMPILACIÓN:
-cd "C:\Users\renat\Desktop\AGO25-ENE26\Graficacion"
+cd "C:\Users\renat\Desktop\AGO25-ENE26\Graficacion\GC_Proyecto"
 gcc PROYECTO_FINAL.c -o PROYECTO_FINAL.exe -lfreeglut -lopengl32 -lglu32 -mconsole
 PROYECTO_FINAL.exe
 
@@ -12,11 +12,15 @@ PROYECTO_FINAL.exe
 #include <string.h>
 #include <windows.h>
 
+#ifndef GL_BGR_EXT
+#define GL_BGR_EXT 0x80E0
+#endif
+
 #define PI 3.14159265359
 #define RAD_TO_DEG (180.0/PI)
 #define DEG_TO_RAD (PI/180.0)
 
-// Límites de movimiento de articulaciones
+// Límites de movimiento de articulaciones son angulos TODOS RADIANES 
 #define MUSLO_MIN 1.67
 #define MUSLO_MAX 87.62
 #define RODILLA_MIN -78.54
@@ -47,6 +51,7 @@ typedef struct Personaje {
     float colorVestidoOscuro[3];  
     float colorCuello[3];       
     // Ángulos de cada articulación (en radianes)
+    //deifiniendoe la pose inicial
     double anguloBrazoDer, anguloAntebrazoDer;
     double anguloBrazoIzq, anguloAntebrazoIzq;
     double anguloMusloDer, anguloPantorrillaDer;
@@ -57,6 +62,70 @@ typedef struct Personaje {
     int tipoAnimacion;            // es q tengo pensado en que tenga varias animaciones a lo largo de la cinematica
     int animando;                 // 1=animando, 0=quieto
 } Personaje;
+
+//AQUI SE HACE LISTA ENLAZADA
+//ESTE ES EL FRAME
+typedef struct Keyframe {
+    //el moment en seg donde desbe ocurrir este frame 
+    float tiempo;
+    
+    // BRAZOS
+    double anguloBrazoDer;
+    double anguloAntebrazoDer;
+    double anguloBrazoIzq;
+    double anguloAntebrazoIzq;
+    // PIERNAS
+    double anguloMusloDer;
+    double anguloPantorrillaDer;
+    double anguloMusloIzq;
+    double anguloPantorrillaIzq;
+    // CABEZA (ESTA AUN NO LA USO)
+    double anguloCabeza;
+    
+    // POS DEL PERSONAJE COMPLETO
+    float posX;  
+    float posY;
+    
+    struct Keyframe* siguiente;     //puntero al siguiente frame en la lsita enlazada
+} Keyframe;
+
+//ESTE ES EL CONJUNTO DE LOS FRAME
+//lo veo como el libro de animaciones
+typedef struct AnimacionLista{
+    Keyframe* primerKeyframe;       //puntero al primer frame de la animacion
+    Keyframe* keyframeActual;
+    int numKeyframes;               //cuantos fotogramas tiene la animacion 
+    float tiempoAnimacion;          //total de duracion de la animacion
+} AnimacionLista;
+
+
+//esta es una strcu para la escenas que va a ir en la cola 
+typedef struct Escena {
+    int numero;                    //num de la escena
+    float duracionInicio;          //segen que inicia
+    float duracionFin;             //seg en que termina
+    char nombre[50];               
+    void (*renderizar)(void);      // Puntero a función de dibujo
+    struct Escena* siguiente;      // Siguiente escena en la cola
+} Escena;
+
+typedef struct ColaEscenas{
+    Escena* frente;                // Primera escena ES LA QUE SE REPRODUCE 
+    Escena* final;                 // Última escena agregada
+    int totalEscenas;              // Cantidad de escenas
+    float tiempoTotal;             // tiempo total de todas las escenas
+} ColaEscenas;
+
+//esta si es de chat pq ni idea como se hacia jajsajsja
+typedef struct Textura{
+    // Es un array unidimensional que contiene los valores de color de TODOS los píxeles
+    unsigned char* data;
+    int width;//ancho de la textura en pix
+    int height;//alto de la textura en pix
+} Textura;
+
+
+
 
 
 // proporciones inciiales del cuerpo
@@ -82,6 +151,43 @@ int numPersonajes = 0;            // Contador actual
 int animacion_pausada = 0;        // Estado: 0=play, 1=pause
 int opcion_seleccionada = 0;      // Opción del menú seleccionada
 int menu_activo = 1;              // Visibilidad del menú
+
+AnimacionLista animaciones[10];  // Una animación por cada personaje
+int animaciones_inicializadas = 0;
+
+// Variables para las colas
+ColaEscenas colaEscenas = {NULL, NULL, 0, 0.0};
+int escena_actual = 0;
+float alpha_texto = 0.0;  // Para efectos de fade in/out de textos
+
+float fantasma_oscilacion = 0.0;
+float fantasma_x = -1.2;
+float fantasma_y = 0.3;
+float fantasma_acercamiento = -1.2;
+float fantasma_arbol_x = 0.5;
+float tiempo_total = 0.0; 
+
+
+//esto es para las texturas
+GLuint texturaInicioMictlan; 
+Textura texInicioMictlan;
+int texturas_cargadas = 0;
+GLuint texturaFondoSala;
+Textura texFondoSala;
+GLuint texturaAltar;
+Textura texAltar;
+GLuint texturaFondoCuarto;
+Textura texFondoCuarto;
+GLuint texturaFondoGraduacion;
+Textura texFondoGraduacion;
+GLuint texturaFondoOficina;
+Textura texFondoOficina;
+GLuint texturacaminoMictlan;
+Textura texcaminoMictlan;
+GLuint texturaFondoNoche;
+Textura texFondoNoche;
+GLuint texturaFondoFantasma;
+Textura texFondoFantasma;
 
 double limitarAngulo(double angulo, double min, double max);
 void dibujarCirculo(float x, float y, float radio, int segmentos);
@@ -296,19 +402,6 @@ void dibujarVestidoPersonaje(Personaje* p) {
     dibujarPoligono(cuello, 4);
 }
 
-void dibujarFlor(float x, float y, float radio, float r, float g, float b) {
-    glColor3f(r * 0.7, g * 0.5, 0.0);
-    dibujarCirculo(x, y, radio * 0.4, 15);
-    
-    glColor3f(r, g, b);
-    for(int i = 0; i < 8; i++) {
-        float angulo = (2.0 * PI * i) / 8.0;
-        float px = x + radio * 0.7 * cos(angulo);
-        float py = y + radio * 0.7 * sin(angulo);
-        dibujarCirculo(px, py, radio * 0.5, 12);
-    }
-}
-
 
 void dibujarCabezaPersonaje(Personaje* p) {
     glColor3f(0.95, 0.87, 0.78);
@@ -346,7 +439,6 @@ void dibujarCabezaPersonaje(Personaje* p) {
     dibujarPoligono(mechonDer, 6);
     
    
-    //dibujarFlor(-0.075 + centroTorso[0], 0.40 + centroTorso[1], 1.0, 0.8, 0.9);
 }
 
 // Dibuja recursivamente un nodo y sus hijos (recorrido del árbol)
@@ -519,81 +611,6 @@ void display() {
 
 
 
-//DECORACIONES, AUN NO SE USAAAAAN 
-
-void dibujarCalavera(float x, float y, float tamano) {
-    glColor3f(0.98, 0.98, 1.0);
-    dibujarCirculo(x, y + tamano * 0.15, tamano * 0.25, 25);
-    
-    glBegin(GL_POLYGON);
-        glVertex2f(x - tamano * 0.2, y + tamano * 0.05);
-        glVertex2f(x + tamano * 0.2, y + tamano * 0.05);
-        glVertex2f(x + tamano * 0.15, y - tamano * 0.1);
-        glVertex2f(x - tamano * 0.15, y - tamano * 0.1);
-    glEnd();
-    
-    glColor3f(0.0, 0.0, 0.0);
-    dibujarCirculo(x - tamano * 0.12, y + tamano * 0.2, tamano * 0.08, 20);
-    dibujarCirculo(x + tamano * 0.12, y + tamano * 0.2, tamano * 0.08, 20);
-    
-    glBegin(GL_TRIANGLES);
-        glVertex2f(x, y + tamano * 0.05);
-        glVertex2f(x - tamano * 0.04, y + tamano * 0.15);
-        glVertex2f(x + tamano * 0.04, y + tamano * 0.15);
-    glEnd();
-    
-    glColor3f(0.1, 0.1, 0.1);
-    glLineWidth(2.0);
-    for(int i = 0; i < 6; i++) {
-        float dx = x - tamano * 0.12 + (i * tamano * 0.05);
-        glBegin(GL_LINES);
-            glVertex2f(dx, y);
-            glVertex2f(dx, y - tamano * 0.08);
-        glEnd();
-    }
-    
-    glColor3f(1.0, 0.2, 0.5);
-    dibujarCirculo(x, y + tamano * 0.35, tamano * 0.08, 15);
-    
-    glColor3f(0.3, 0.8, 1.0);
-    dibujarCirculo(x - tamano * 0.15, y + tamano * 0.3, tamano * 0.05, 12);
-    dibujarCirculo(x + tamano * 0.15, y + tamano * 0.3, tamano * 0.05, 12);
-    
-    glColor3f(1.0, 0.8, 0.2);
-    dibujarCirculo(x - tamano * 0.12, y + tamano * 0.2, tamano * 0.03, 10);
-    dibujarCirculo(x + tamano * 0.12, y + tamano * 0.2, tamano * 0.03, 10);
-}
-
-
-//esta funcion tal vez la use , pero chance ocupo texturas de fondo 
-
-void dibujarEstrellas(void) {
-    glColor3f(1.0, 1.0, 0.95);
-    
-    float estrellas[][2] = {
-        {-0.85, 0.75}, {-0.6, 0.82}, {-0.35, 0.68}, {-0.7, 0.55},
-        {0.15, 0.78}, {0.45, 0.7}, {0.72, 0.85}, {0.35, 0.88},
-        {-0.92, 0.58}, {0.08, 0.92}, {0.82, 0.58}, {-0.25, 0.92},
-        {-0.45, 0.48}, {0.6, 0.5}, {0.0, 0.65}, {-0.15, 0.8}
-    };
-    
-    for(int i = 0; i < 16; i++) {
-        float x = estrellas[i][0];
-        float y = estrellas[i][1];
-        float tam = 0.012 + (i % 3) * 0.006;
-        
-        glBegin(GL_TRIANGLE_FAN);
-            glVertex2f(x, y);
-            for(int j = 0; j <= 8; j++) {
-                float angulo = (2.0 * PI * j) / 8.0;
-                float radio = (j % 2 == 0) ? tam : tam * 0.4;
-                glVertex2f(x + radio * cos(angulo), y + radio * sin(angulo));
-            }
-        glEnd();
-    }
-}
-
-
 
 
 
@@ -662,13 +679,6 @@ void dibujarGorroNavidad(float x, float y, float escala) {
     // Pompón blanco en la punta
     dibujarCirculo(x, y + 0.15 * escala, 0.025 * escala, 15);
 }
-
-
-
-
-
-
-
 
 
 
@@ -925,11 +935,7 @@ int main(int argc, char** argv) {
     glutKeyboardFunc(tecladoMenu);
     glutSpecialFunc(tecladoEspecialMenu);
     
-    printf("\nCONTROLES:\n");
-    printf("  ESPACIO - Pausar/Reanudar\n");
-    printf("  R - Reiniciar animacion\n");
-    printf("  M - Mostrar/Ocultar menu\n");
-    printf("  ESC - Salir\n");
+
     
     glutMainLoop();
     return 0;
