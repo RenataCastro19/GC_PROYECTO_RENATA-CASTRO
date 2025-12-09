@@ -1,8 +1,6 @@
 /*
-COMPILACIÓN:
-cd "C:\Users\renat\Desktop\AGO25-ENE26\Graficacion\GC_Proyecto"
-gcc PROYECTO_FINAL.c -o PROYECTO_FINAL.exe -lfreeglut -lopengl32 -lglu32 -mconsole
-PROYECTO_FINAL.exe
+
+glScalef(escala_ancho, escala_alto, 1.0);
 
 */
 #include <GL/glut.h>
@@ -10,7 +8,13 @@ PROYECTO_FINAL.exe
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <windows.h>
+#ifdef _WIN32
+    #include <windows.h>
+    #define SLEEP(ms) Sleep(ms)
+#else
+    #include <unistd.h>
+    #define SLEEP(ms) usleep((ms) * 1000)
+#endif
 
 #ifndef GL_BGR_EXT
 #define GL_BGR_EXT 0x80E0
@@ -34,15 +38,15 @@ PROYECTO_FINAL.exe
 // NODO para represnetar cada arituclacion
 typedef struct Nodo {
     char nombre[50];              
-    double tx, ty;                // Posición relativa al padre
-    double angulo;                // Rotación actual
-    double longitud;              // Tamaño del segmento
+    double tx, ty;                // Posición relativa al padre(que tan alejado estal del padre este nodo)
+    double angulo;                // Rotación actual, define cuánto está doblada la articulación
+    double longitud;              // Tamaño del segmento, del hueso jaajsj
     struct Nodo* padre;           // Puntero al nodo padre
     struct Nodo* primerHijo;      // Primer hijo en la jerarquía
     struct Nodo* siguienteHermano;// Siguiente nodo al mismo nivel
 } Nodo;
 
-// esta es la estructura de mi personaje , en mi caso es una mujer 
+// esta es la estructura de mi personaje , en mi caso es una mujer, mal hecha, pero cuenta :D
 typedef struct Personaje {
     char nombre[50];
     double posX, posY;            // la pos del personaje en el plano
@@ -51,7 +55,7 @@ typedef struct Personaje {
     float colorVestidoOscuro[3];  
     float colorCuello[3];       
     // Ángulos de cada articulación (en radianes)
-    //deifiniendoe la pose inicial
+    //deifiniendoe la pose inicial, se copian alos nodos correspondiente del arbol
     double anguloBrazoDer, anguloAntebrazoDer;
     double anguloBrazoIzq, anguloAntebrazoIzq;
     double anguloMusloDer, anguloPantorrillaDer;
@@ -60,7 +64,7 @@ typedef struct Personaje {
     
     float tiempoAnimacion;        // Tiempo acumulado
     int tipoAnimacion;            // es q tengo pensado en que tenga varias animaciones a lo largo de la cinematica
-    int animando;                 // 1=animando, 0=quieto
+    int animando;                 // 1=animando, 0=quieto, banderita
 } Personaje;
 
 //AQUI SE HACE LISTA ENLAZADA
@@ -68,7 +72,7 @@ typedef struct Personaje {
 typedef struct Keyframe {
     //el moment en seg donde desbe ocurrir este frame 
     float tiempo;
-    
+    //almacena los angulos de los brazos en este frame 
     // BRAZOS
     double anguloBrazoDer;
     double anguloAntebrazoDer;
@@ -80,7 +84,7 @@ typedef struct Keyframe {
     double anguloMusloIzq;
     double anguloPantorrillaIzq;
       
-    // POS DEL PERSONAJE COMPLETO
+    // pos del personaje completo en este frame
     float posX;  
     float posY;
     
@@ -117,8 +121,8 @@ typedef struct ColaEscenas{
 typedef struct Textura{
     // Es un array unidimensional que contiene los valores de color de TODOS los píxeles
     unsigned char* data;
-    int width;//ancho de la textura en pix
-    int height;//alto de la textura en pix
+    int width;      //ancho de la textura en pix
+    int height;     //alto de la textura en pix
 } Textura;
 
 
@@ -140,31 +144,31 @@ double vectorPantorrillaIzq[4] = {0.0, -0.12, 0, 1};
 
 int ventana_principal;            // ID ventana de animación
 int ventana_menu;                 // ID ventana de menú
-Personaje* personajes[10];        // Array de personajes 
+Personaje* personajes[10];        //array de personajes (puse mas de 4 pq quise se optimista y hacer mas pero , parele de contar)
 int numPersonajes = 0;            // Contador actual
-int animacion_pausada = 0;        // Estado: 0=play, 1=pause
+int animacion_pausada = 1;        // Estado: 0=play, 1=pause
 int opcion_seleccionada = 0;      // Opción del menú seleccionada
 int menu_activo = 1;              // Visibilidad del menú
 
-AnimacionLista animaciones[10];  // Una animación por cada personaje
+AnimacionLista animaciones[10];  //una animación por cada personaje(una vez mas siendo optimista y solo llegue max 4 creo ajasjsjajs)
 int animaciones_inicializadas = 0;
 
 // variables de la cola
-ColaEscenas colaEscenas = {NULL, NULL, 0, 0.0};
+ColaEscenas colaEscenas = {NULL, NULL, 0, 0.0};//instancia de la cola
 int escena_actual = 0;
-float alpha_texto = 0.0;  // Para efectos de fade in/out de textos
+float alpha_texto = 0.0;        //es para la transparencia del texto   
 
-float fantasma_oscilacion = 0.0;
+float fantasma_oscilacion = 0.0;//esta se usa para que el fantasma como que flote
 float fantasma_x = -0.8; //posicion horizontal 
 float fantasma_y = 0.1;     //posicion vertical
-float fantasma_acercamiento = -1.2;
-float fantasma_escala_inicio = 0.3;  //tam de como ainicia su aparicion
+float fantasma_acercamiento = -1.2;// Valores negativos = está alejado, valores positivos = está cerca
+float fantasma_escala_inicio = 0.3;  //tam de como ainicia su aparicion, es a escala esta a 30%
 float tiempo_total = 0.0;
-float fantasma_alejamiento = 2.5;
+float fantasma_alejamiento = 2.5;//este es para el alejamiento de la escena final 
 
 int texturas_cargadas = 0;
-GLuint texturaInicioMictlan;  
-Textura texInicioMictlan;
+GLuint texturaInicioMictlan;  //nombrede la textura
+Textura texInicioMictlan;//estructura que almacena los datos de la textura (ancho, alto, píxeles)
 GLuint texturaFondoSala;
 Textura texFondoSala;
 GLuint texturaAltar;
@@ -249,6 +253,47 @@ void inicializarTexturas();
 void dibujarRectanguloTexturizado(float x, float y, float ancho, float alto, GLuint textura);
 
 
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
+    
+    glutInitWindowSize(900, 650);//tam de la ventana
+    glutInitWindowPosition(100, 50);
+    ventana_principal = glutCreateWindow("Personajes chavas");
+    
+    glClearColor(0.85, 0.9, 0.95, 1.0); 
+    inicializarTexturas();  // Cargar texturas al inici
+    //ejemplos de los personajes
+    personajes[0] = crearPersonaje("Rubi", 0.0, 0.0, 1.0, 0.55, 0.25, 0.85, 0);// RUBI (Personaje 0 - Morado)
+    personajes[1] = crearPersonaje("Roxana", 0.0, 0.0, 1.0, 0.9, 0.2, 0.3, 0);// ROXANA (Personaje 1 - Rojo)
+    personajes[3] = crearPersonaje("Renata", 0.0, 0.0, 1.0, 0.3, 0.8, 0.4, 0);// RENATA (Personaje 2 - Verde
+    personajes[2] = crearPersonaje("Rebeca", 0.0, 0.0, 1.0, 0.2, 0.4, 0.9, 0);// REBECA (Personaje 3 - Azul)
+    numPersonajes = 4;
+    
+    glutDisplayFunc(display);
+    glutIdleFunc(redibujo);
+    glutKeyboardFunc(teclado);
+    
+    // ventana de menu 
+    glutInitWindowSize(400, 550);
+    glutInitWindowPosition(1160, 100);
+    ventana_menu = glutCreateWindow("Menu ");
+    glClearColor(0.1, 0.1, 0.15, 1.0);
+    glutDisplayFunc(displayMenu);
+    glutKeyboardFunc(tecladoMenu);
+    glutSpecialFunc(tecladoEspecialMenu);
+    
+    printf("\nCONTROLES:\n");
+    printf("  ESPACIO - Pausar/Reanudar\n");
+    printf("  R - Reiniciar animacion\n");
+    printf("  M - Mostrar/Ocultar menu\n");
+    printf("  ESC - Salir\n");
+    
+    glutMainLoop();
+    return 0;
+}
+
+
 // Limita un ángulo al rango permitido
 double limitarAngulo(double angulo, double min, double max) {
     double angulo_grados = angulo * RAD_TO_DEG;
@@ -261,6 +306,7 @@ void dibujarCirculo(float x, float y, float radio, int segmentos) {
     glBegin(GL_POLYGON);
     for(int i = 0; i < segmentos; i++) {
         float angulo = (2.0 * PI * i) / segmentos;//Se calcu el ang de cara vertice
+        //se convierten los ang a coor normales
         float px = x + radio * cos(angulo);
         float py = y + radio * sin(angulo);
         glVertex2f(px, py);
@@ -268,7 +314,7 @@ void dibujarCirculo(float x, float y, float radio, int segmentos) {
     glEnd();
 }
 
-//esto es lo que siempre uso en mis programas
+//esto es lo que siempre uso en mis programas jejeje
 void dibujarLinea(float x1, float y1, float x2, float y2) {
     glBegin(GL_LINES);
         glVertex2f(x1, y1);
@@ -285,10 +331,10 @@ void dibujarPoligono(float vertices[][2], int numVertices) {
     glEnd();
 }
 
-// Crea un nodo nuevo para el árbol jerárquico
+// Crea un nodo nuevo para el arbol jerárquico
 Nodo* crearNodo(char* nombre, double tx, double ty, double longitud, double angulo) {
     Nodo* nuevo = (Nodo*)malloc(sizeof(Nodo));
-    strcpy(nuevo->nombre, nombre);
+    strcpy(nuevo->nombre, nombre);// Copia la cadena 'nombre' dentro del campo nombre del nodo
     nuevo->tx = tx;
     nuevo->ty = ty;
     nuevo->angulo = angulo;
@@ -301,19 +347,20 @@ Nodo* crearNodo(char* nombre, double tx, double ty, double longitud, double angu
 
 // Agrega un hijo a un nodo en el árbol
 void agregarHijo(Nodo* padre, Nodo* hijo) {
-    hijo->padre = padre;
-    if (padre->primerHijo == NULL) {
+    hijo->padre = padre;                //establece padre del hijo
+    if (padre->primerHijo == NULL) {    //padre sin hijos, primer hijo
         padre->primerHijo = hijo;
     } else {
-        Nodo* hermano = padre->primerHijo;
+        Nodo* hermano = padre->primerHijo;//recorre lista hermano hasta el ultimo 
+        //
         while (hermano->siguienteHermano != NULL) {
-            hermano = hermano->siguienteHermano;
+            hermano = hermano->siguienteHermano;    //hasta llegar a ultimo hermano
         }
-        hermano->siguienteHermano = hijo;
+        hermano->siguienteHermano = hijo;//añade hijo como hermano del ult 
     }
 }
 
-// Libera recursivamente toda la memoria del árbol
+// libera recursivamente toda la memoria del árbol
 void liberarArbol(Nodo* nodo) {
     if (nodo == NULL) return;
     liberarArbol(nodo->primerHijo);
@@ -321,9 +368,9 @@ void liberarArbol(Nodo* nodo) {
     free(nodo);
 }
 
-// Construye el árbol jerárquico completo del personaje
+// Construye el arbol jerárquico completo del personaje
 void construirArbolPersonaje(Personaje* p) {
-    // Calcular longitudes de cada segmento
+    // calcular longitudes de cada segmento, distancia euclideana , gracias doc Manir
     double longBrazoDer = sqrt(vectorBrazoDer[0]*vectorBrazoDer[0] + vectorBrazoDer[1]*vectorBrazoDer[1]);
     double longAntebrazoDer = sqrt(vectorAntebrazoDer[0]*vectorAntebrazoDer[0] + vectorAntebrazoDer[1]*vectorAntebrazoDer[1]);
     double longBrazoIzq = sqrt(vectorBrazoIzq[0]*vectorBrazoIzq[0] + vectorBrazoIzq[1]*vectorBrazoIzq[1]);
@@ -392,8 +439,8 @@ void actualizarAngulosEnNodos(Nodo* nodo, Personaje* p) {
         nodo->angulo = limitarAngulo(p->anguloPantorrillaIzq, RODILLA_MIN, RODILLA_MAX);
     
     // Continuar con hijos y hermanos
-    actualizarAngulosEnNodos(nodo->primerHijo, p);
-    actualizarAngulosEnNodos(nodo->siguienteHermano, p);
+    actualizarAngulosEnNodos(nodo->primerHijo, p);    // Llamada recursiva para actualizar todos los nodos hijos del nodo actual produndid
+    actualizarAngulosEnNodos(nodo->siguienteHermano, p);// Llamada recursiva para actualizar todos los nodos hermanos del nodo actual anchura
 }
 
 void actualizarAngulosPersonaje(Personaje* p) {
@@ -427,7 +474,7 @@ void dibujarVestidoPersonaje(Personaje* p) {
     dibujarLinea(0.06 + centroTorso[0], 0.15 + centroTorso[1], 0.12 + centroTorso[0], -0.35 + centroTorso[1]);
     
     glColor3f(p->colorCuello[0], p->colorCuello[1], p->colorCuello[2]);
-    float cuello[][2] = {
+    float cuello[][2] = {   
         {-0.02 + centroTorso[0], 0.22 + centroTorso[1]},
         {0.02 + centroTorso[0], 0.22 + centroTorso[1]},
         {0.02 + centroTorso[0], 0.2 + centroTorso[1]},
@@ -441,7 +488,7 @@ void dibujarCabezaPersonaje(Personaje* p) {
     // Guardar la matriz actual
     glPushMatrix();
     
-    // Mover al centro de la cabeza (posición más baja)
+    // Mover al centro de la cabeza 
     glTranslatef(centroTorso[0], centroTorso[1] - 0.05, 0);
     
     // Dibujar cabello (parte de atrás)
@@ -454,22 +501,22 @@ void dibujarCabezaPersonaje(Personaje* p) {
     
     // Dibujar ojos ovalados
     glColor3f(1, 1, 1); // Blanco de los ojos
-    // Ojo izquierdo (óvalo horizontal)
+    // Ojo izquierdo 
     glPushMatrix();
     glTranslatef(-0.03, 0.37, 0);
-    glScalef(1.5, 1.0, 1.0); // Achatamos el círculo horizontalmente
+    glScalef(1.5, 1.0, 1.0); 
     dibujarCirculo(0, 0, 0.02, 16);
     glPopMatrix();
     
-    // Ojo derecho (óvalo horizontal)
+    // Ojo derecho
     glPushMatrix();
     glTranslatef(0.03, 0.37, 0);
-    glScalef(1.5, 1.0, 1.0); // Achatamos el círculo horizontalmente
+    glScalef(1.5, 1.0, 1.0);
     dibujarCirculo(0, 0, 0.02, 16);
     glPopMatrix();
     
-    // Pupilas (también ovaladas)
-    glColor3f(0, 0, 0); // Negro
+    // Pupilas 
+    glColor3f(0, 0, 0); 
     // Pupila izquierda
     glPushMatrix();
     glTranslatef(-0.03, 0.37, 0);
@@ -484,19 +531,19 @@ void dibujarCabezaPersonaje(Personaje* p) {
     dibujarCirculo(0, 0, 0.01, 12);
     glPopMatrix();
     
-    // Boca sonriente (curva suave)
+    // Boca sonriente
     glColor3f(0.8, 0.2, 0.2); // Rojo para la boca
     glLineWidth(2.0);
     glBegin(GL_LINE_STRIP);
     for (float i = -0.04; i <= 0.04; i += 0.01) {
-        float y = 0.33 - 0.02 * (1 - i*i/0.0016); // Curva más pronunciada
+        float y = 0.33 - 0.02 * (1 - i*i/0.0016);
         glVertex2f(i, y);
     }
     glEnd();
     
 
     // Dibujar cuello
-    glColor3f(0.95, 0.87, 0.78); // Color piel
+    glColor3f(0.95, 0.87, 0.78);
     float cuelloPersona[][2] = {
         {-0.025, 0.22},
         {0.025, 0.22},
@@ -756,7 +803,7 @@ void dibujarGorroNavidad(float x, float y, float escala) {
 }
 
 void redibujo() {
-    Sleep(30);
+    SLEEP(30);
     
     if(!animaciones_inicializadas) {
         inicializarAnimaciones();
@@ -827,14 +874,14 @@ void teclado(unsigned char key, int x, int y) {
     }
     else if(key == 'r' || key == 'R') {  
     // Reiniciar animaciones
-        for(int i = 0; i < numPersonajes; i++) {
-            animaciones[i].tiempoAnimacion = 0.0;
-        }
-        
+    for(int i = 0; i < numPersonajes; i++) {
+        animaciones[i].tiempoAnimacion = 0.0;
+    }
+    
         // Reiniciar escenas y variables
         colaEscenas.tiempoTotal = 0.0;
         tiempo_total = 0.0;
-        escena_actual = 1;
+        escena_actual = 0;  // CAMBIAR de 1 a 0
         alpha_texto = 0.0;
         fantasma_x = -0.8;
         fantasma_oscilacion = 0.0;
@@ -842,7 +889,7 @@ void teclado(unsigned char key, int x, int y) {
         fantasma_acercamiento = -1.2;
         fantasma_alejamiento = 2.5;
         
-        animacion_pausada = 0;
+        animacion_pausada = 1;
         printf("Animacion REINICIADA\n");
         
         glutSetWindow(ventana_menu);
@@ -972,16 +1019,18 @@ void tecladoMenu(unsigned char key, int x, int y) {
             case 2:  // REINICIAR
                 for(int i = 0; i < numPersonajes; i++) {
                     personajes[i]->tiempoAnimacion = 0.0;
+                    animaciones[i].tiempoAnimacion = 0.0;  
                 }
                 colaEscenas.tiempoTotal = 0.0;
                 tiempo_total = 0.0;
-                escena_actual = 1;
+                escena_actual = 0;  // CAMBIAR de 1 a 0
                 alpha_texto = 0.0;
-                fantasma_x = -1.2;
+                fantasma_x = -0.8;  // CAMBIAR de -1.2 a -0.8
                 fantasma_oscilacion = 0.0;
                 fantasma_escala_inicio = 0.3;
                 fantasma_acercamiento = -1.2;
-                animacion_pausada = 0;
+                fantasma_alejamiento = 2.5;  // AGREGAR esta línea
+                animacion_pausada = 1;
                 printf("Animacion REINICIADA\n");
                 
                 break;
@@ -1087,30 +1136,7 @@ void liberarAnimacion(AnimacionLista* anim) {
     anim->numKeyframes = 0;
 }
 
-// Interpolar entre dos keyframes
-void interpolarKeyframes(Keyframe* k1, Keyframe* k2, float t, Personaje* p) {
-    if(k1 == NULL || k2 == NULL) return;
-    
-    // Clampear t entre 0 y 1
-    if(t < 0.0) t = 0.0;
-    if(t > 1.0) t = 1.0;
-    
-    // Interpolar BRAZOS
-    p->anguloBrazoDer = k1->anguloBrazoDer + t * (k2->anguloBrazoDer - k1->anguloBrazoDer);
-    p->anguloAntebrazoDer = k1->anguloAntebrazoDer + t * (k2->anguloAntebrazoDer - k1->anguloAntebrazoDer);
-    p->anguloBrazoIzq = k1->anguloBrazoIzq + t * (k2->anguloBrazoIzq - k1->anguloBrazoIzq);
-    p->anguloAntebrazoIzq = k1->anguloAntebrazoIzq + t * (k2->anguloAntebrazoIzq - k1->anguloAntebrazoIzq);
-    
-    // Interpolar PIERNAS
-    p->anguloMusloDer = k1->anguloMusloDer + t * (k2->anguloMusloDer - k1->anguloMusloDer);
-    p->anguloPantorrillaDer = k1->anguloPantorrillaDer + t * (k2->anguloPantorrillaDer - k1->anguloPantorrillaDer);
-    p->anguloMusloIzq = k1->anguloMusloIzq + t * (k2->anguloMusloIzq - k1->anguloMusloIzq);
-    p->anguloPantorrillaIzq = k1->anguloPantorrillaIzq + t * (k2->anguloPantorrillaIzq - k1->anguloPantorrillaIzq);
-    
-    // Interpolar POSICIÓN
-    p->posX = k1->posX + t * (k2->posX - k1->posX);
-    p->posY = k1->posY + t * (k2->posY - k1->posY);
-}
+
 
 // Buscar entre qué keyframes estamos
 Keyframe* buscarKeyframeActual(AnimacionLista* anim) {
@@ -1128,60 +1154,7 @@ Keyframe* buscarKeyframeActual(AnimacionLista* anim) {
     return anterior; // Último keyframe
 }
 
-void reproducirAnimacion(int indicePersonaje) {
-    if(indicePersonaje < 0 || indicePersonaje >= numPersonajes){ 
-        return;
-    }
-    
-    int indiceAnimacion = indicePersonaje; // Por defecto usa su propia animación
-    
-    // Cambiar animación según la escena actual
-    if(escena_actual == 2) {
-        // ESCENA 2: Altar de muertos - Cada una hace algo diferente
-        if(indicePersonaje == 0) indiceAnimacion = 0;      // Rubi: levanta brazos
-        else if(indicePersonaje == 1) indiceAnimacion = 1; // Roxana: camina
-        else if(indicePersonaje == 2) indiceAnimacion = 4; // Rebeca: saluda
-        else if(indicePersonaje == 3) indiceAnimacion = 5; // Renata: baila
-    }
-    else if(escena_actual == 7) {
-        // ESCENA 7: Renata en su cuarto
-        if(indicePersonaje == 3) indiceAnimacion = 6; // Renata: sentada escribiendo
-    }
-    else if(escena_actual == 8) {
-        // ESCENA 8: Rubi en oficina
-        if(indicePersonaje == 0) indiceAnimacion = 7; // Rubi: trabajando
-    }
-    else if(escena_actual == 9) {
-        // ESCENA 9: Rebeca en graduación
-        if(indicePersonaje == 2) indiceAnimacion = 8; // Rebeca: camina y saluda
-    }
-
-    AnimacionLista* anim = &animaciones[indiceAnimacion];
-    Personaje* p = personajes[indicePersonaje];
-    
-
-    anim->tiempoAnimacion += 0.05;
-    
-    Keyframe* k1 = buscarKeyframeActual(anim);
-    if(k1 == NULL) {
-        anim->tiempoAnimacion = 0.0;
-        return;
-    }
-    
-    Keyframe* k2 = k1->siguiente;
-    if(k2 == NULL) {
-        anim->tiempoAnimacion = 0.0;
-        return;
-    }
-    
-    float duracion = k2->tiempo - k1->tiempo;
-    float tiempoLocal = anim->tiempoAnimacion - k1->tiempo;
-    float t = tiempoLocal / duracion;
-    
-    interpolarKeyframes(k1, k2, t, p);
-    actualizarAngulosPersonaje(p);
-}
-
+//aqui se crean las animaciones, (crea los jeyframes y los guarda)
 void inicializarAnimaciones() {
     if(animaciones_inicializadas){
         return;
@@ -1195,19 +1168,20 @@ void inicializarAnimaciones() {
     }
 
     // ANIMACIÓN 0: Rubi levanta brazos 
+    //se crean personajes temporales para diseñar, no son lo que s emuestran
     Personaje* temp0 = crearPersonaje("Temp", 0.0, 0.0, 1.0, 0.55, 0.25, 0.85, 0);
     temp0->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
     temp0->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
     Keyframe* kf0_1 = crearKeyframe(0.0, temp0);
     agregarKeyframe(&animaciones[0], kf0_1);
     
-    temp0->anguloBrazoDer = BRAZO_MAX * DEG_TO_RAD * 0.8;
-    temp0->anguloAntebrazoDer = ANTEBRAZO_MAX * DEG_TO_RAD * 0.6;   
+    temp0->anguloBrazoDer = BRAZO_MAX * DEG_TO_RAD * 0.6;
+    temp0->anguloAntebrazoDer = ANTEBRAZO_MAX * DEG_TO_RAD * 0.4;   
     Keyframe* kf0_2 = crearKeyframe(2.0, temp0);
     agregarKeyframe(&animaciones[0], kf0_2);
     
-    temp0->anguloBrazoIzq = BRAZO_MAX * DEG_TO_RAD * 0.8;
-    temp0->anguloAntebrazoIzq = ANTEBRAZO_MAX * DEG_TO_RAD * 0.6;
+    temp0->anguloBrazoIzq = BRAZO_MAX * DEG_TO_RAD * 0.6;
+    temp0->anguloAntebrazoIzq = ANTEBRAZO_MAX * DEG_TO_RAD * 0.4;
     Keyframe* kf0_3 = crearKeyframe(4.0, temp0);
     agregarKeyframe(&animaciones[0], kf0_3);
     
@@ -1244,63 +1218,259 @@ void inicializarAnimaciones() {
     Keyframe* kf1_3 = crearKeyframe(6.0, temp1);
     agregarKeyframe(&animaciones[1], kf1_3);
 
-    // Keyframe 4
-    temp1->posX = 0.0;
-    temp1->anguloMusloDer = MUSLO_MAX * DEG_TO_RAD * 0.3;
-    temp1->anguloMusloIzq = MUSLO_MIN * DEG_TO_RAD;
-    Keyframe* kf1_4 = crearKeyframe(9.0, temp1);
+    temp1->posX = 0.4;  // MISMA posición que keyframe 3
+    temp1->anguloMusloDer = MUSLO_MIN * DEG_TO_RAD;  // Piernas rectas
+    temp1->anguloMusloIzq = MUSLO_MIN * DEG_TO_RAD;  // Piernas rectas
+    Keyframe* kf1_4 = crearKeyframe(8.0, temp1);  
     agregarKeyframe(&animaciones[1], kf1_4);
 
-    // Keyframe 5:
-    temp1->posX = -0.4;
-    temp1->anguloMusloDer = MUSLO_MIN * DEG_TO_RAD;
-    temp1->anguloMusloIzq = MUSLO_MAX * DEG_TO_RAD * 0.3;
-    Keyframe* kf1_5 = crearKeyframe(12.0, temp1);
-    agregarKeyframe(&animaciones[1], kf1_5);
+    
 
     eliminarPersonaje(temp1);
     
-    // ANIMACIÓN 4: Rebeca saluda (para escena 2)
-    Personaje* temp4 = crearPersonaje("Temp", 0.0, 0.0, 1.0, 0.2, 0.4, 0.9, 0);
-    
-    // Keyframe 1: Brazos abajo (0 segundos)
-    temp4->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
-    temp4->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
-    Keyframe* kf4_1 = crearKeyframe(0.0, temp4);
-    agregarKeyframe(&animaciones[4], kf4_1);
-    
-    // Keyframe 2: Saluda con brazo derecho (1.5 segundos)
-    temp4->anguloBrazoDer = BRAZO_MAX * DEG_TO_RAD * 0.7;
-    temp4->anguloAntebrazoDer = ANTEBRAZO_MAX * DEG_TO_RAD * 0.5;
-    Keyframe* kf4_2 = crearKeyframe(1.5, temp4);
-    agregarKeyframe(&animaciones[4], kf4_2);
-    
-    // Keyframe 3: Baja brazo derecho (3 segundos)
+
+    //ANIMACION 2 - Mano en el pecho
+    Personaje* temp2 = crearPersonaje("Temp", 0.0, 0.0, 0.8, 0.2, 0.4, 0.9, 0);   
+
+    // Keyframe 1: Brazos abajo (posición inicial)
+    temp2->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
+    temp2->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
+    Keyframe* kf2_1 = crearKeyframe(0.0, temp2);
+    agregarKeyframe(&animaciones[2], kf2_1);
+
+    // Keyframe 2: Mano izquierda subiendo hacia el pecho
+    temp2->anguloBrazoIzq = BRAZO_MAX * DEG_TO_RAD * 0.8;      // Levantar brazo izquierdo
+    temp2->anguloAntebrazoIzq = ANTEBRAZO_MAX * DEG_TO_RAD * 0.9;  // Doblar antebrazo hacia el pecho
+    // Brazo derecho se queda abajo
+    temp2->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
+    temp2->anguloAntebrazoDer = ANTEBRAZO_MIN * DEG_TO_RAD;
+    Keyframe* kf2_2 = crearKeyframe(1.5, temp2);
+    agregarKeyframe(&animaciones[2], kf2_2);
+
+    // Keyframe 3: Mano izquierda completamente en el pecho (corazón)
+    temp2->anguloBrazoIzq = BRAZO_MAX * DEG_TO_RAD * 0.55;     
+    temp2->anguloAntebrazoIzq = ANTEBRAZO_MAX * DEG_TO_RAD * 0.9; // Más doblado
+    Keyframe* kf2_3 = crearKeyframe(3.0, temp2);
+    agregarKeyframe(&animaciones[2], kf2_3);
+
+    // Keyframe 4: Mantener mano en el pecho (pose sostenida)
+    Keyframe* kf2_4 = crearKeyframe(7.0, temp2);  // Mantener pose más tiempo
+    agregarKeyframe(&animaciones[2], kf2_4);
+
+    // Keyframe 5: Bajar mano izquierda
+    temp2->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
+    temp2->anguloAntebrazoIzq = ANTEBRAZO_MIN * DEG_TO_RAD*1.0;
+    temp2->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
+    temp2->anguloAntebrazoDer = ANTEBRAZO_MIN * DEG_TO_RAD;
+    Keyframe* kf2_5 = crearKeyframe(10.0, temp2);
+    agregarKeyframe(&animaciones[2], kf2_5);
+
+    eliminarPersonaje(temp2);
+
+
+    //animacion 3
+  
+    Personaje* temp3 = crearPersonaje("Temp", 0.0, 0.0, 1.0, 0.3, 0.8, 0.4, 0);
+
+    // Brazos abajo
+    temp3->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
+    temp3->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
+    Keyframe* kf3_1 = crearKeyframe(0.0, temp3);
+    agregarKeyframe(&animaciones[3], kf3_1);
+
+    // Levantar ambos brazos al frente
+    temp3->anguloBrazoDer = BRAZO_MAX * DEG_TO_RAD * 0.8;
+    temp3->anguloBrazoIzq = BRAZO_MAX * DEG_TO_RAD * 0.5;
+    temp3->anguloAntebrazoDer = ANTEBRAZO_MAX * DEG_TO_RAD * 0.6;
+    temp3->anguloAntebrazoIzq = ANTEBRAZO_MAX * DEG_TO_RAD * 0.6;
+    Keyframe* kf3_2 = crearKeyframe(1.0, temp3);
+    agregarKeyframe(&animaciones[3], kf3_2);
+
+    // Mantener posición (brazos cruzados)
+    Keyframe* kf3_3 = crearKeyframe(3.0, temp3);
+    agregarKeyframe(&animaciones[3], kf3_3);
+
+    // Volver a la normalidad
+    temp3->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
+    temp3->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
+    temp3->anguloAntebrazoDer = ANTEBRAZO_MIN * DEG_TO_RAD;
+    temp3->anguloAntebrazoIzq = ANTEBRAZO_MIN * DEG_TO_RAD;
+    Keyframe* kf3_4 = crearKeyframe(4.0, temp3);
+    agregarKeyframe(&animaciones[3], kf3_4);
+    eliminarPersonaje(temp3);
+
+    // ANIMACIÓN 4: Rubi se lleva las manos a la cara (escena computadora)
+    Personaje* temp4 = crearPersonaje("Temp", 0.0, 0.0, 1.0, 0.55, 0.25, 0.85, 0);
+
+    // Keyframe 1: Brazos abajo (posición inicial)
     temp4->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
     temp4->anguloAntebrazoDer = ANTEBRAZO_MIN * DEG_TO_RAD;
-    Keyframe* kf4_3 = crearKeyframe(3.0, temp4);
-    agregarKeyframe(&animaciones[4], kf4_3);
-    
-    // Keyframe 4: Saluda con brazo izquierdo (4.5 segundos)
-    temp4->anguloBrazoIzq = BRAZO_MAX * DEG_TO_RAD * 0.7;
-    temp4->anguloAntebrazoIzq = ANTEBRAZO_MAX * DEG_TO_RAD * 0.5;
-    Keyframe* kf4_4 = crearKeyframe(4.5, temp4);
-    agregarKeyframe(&animaciones[4], kf4_4);
-    
-    // Keyframe 5: Baja brazo izquierdo (6 segundos)
     temp4->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
     temp4->anguloAntebrazoIzq = ANTEBRAZO_MIN * DEG_TO_RAD;
-    Keyframe* kf4_5 = crearKeyframe(6.0, temp4);
-    agregarKeyframe(&animaciones[4], kf4_5);
-    
-    eliminarPersonaje(temp4);
-    
-    animaciones_inicializadas = 1;
+    Keyframe* kf4_1 = crearKeyframe(0.0, temp4);
+    agregarKeyframe(&animaciones[4], kf4_1);
 
+    // Keyframe 2: Levantando brazos hacia la cara (más al centro)
+    temp4->anguloBrazoDer = BRAZO_MAX * DEG_TO_RAD * 0.95;      // Brazo derecho más levantado
+    temp4->anguloAntebrazoDer = ANTEBRAZO_MAX * DEG_TO_RAD * 1.0;  // Antebrazo completamente doblado
+    temp4->anguloBrazoIzq = BRAZO_MAX * DEG_TO_RAD * 0.75;       // Brazo izquierdo menos levantado (más hacia la izq)
+    temp4->anguloAntebrazoIzq = ANTEBRAZO_MAX * DEG_TO_RAD * 1.0;  // Antebrazo completamente doblado hacia dentro
+    Keyframe* kf4_2 = crearKeyframe(1.5, temp4);
+    agregarKeyframe(&animaciones[4], kf4_2);
+
+    // Keyframe 3: Manos completamente en la cara (pose final centrada)
+    temp4->anguloBrazoDer = BRAZO_MAX * DEG_TO_RAD * 1.0;        // Brazo derecho totalmente levantado
+    temp4->anguloAntebrazoDer = ANTEBRAZO_MAX * DEG_TO_RAD * 1.0;
+    temp4->anguloBrazoIzq = BRAZO_MAX * DEG_TO_RAD * 0.70;       // Brazo izquierdo flexionado hacia la izquierda
+    temp4->anguloAntebrazoIzq = ANTEBRAZO_MAX * DEG_TO_RAD * 1.0;
+    Keyframe* kf4_3 = crearKeyframe(3.0, temp4);
+    agregarKeyframe(&animaciones[4], kf4_3);
+
+    // Keyframe 4: Mantener manos en la cara (pose sostenida)
+    Keyframe* kf4_4 = crearKeyframe(7.0, temp4);  // Mantener más tiempo
+    agregarKeyframe(&animaciones[4], kf4_4);
+
+    // Keyframe 5: Bajar las manos lentamente
+    temp4->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
+    temp4->anguloAntebrazoDer = ANTEBRAZO_MIN * DEG_TO_RAD;
+    temp4->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
+    temp4->anguloAntebrazoIzq = ANTEBRAZO_MIN * DEG_TO_RAD;
+    Keyframe* kf4_5 = crearKeyframe(9.0, temp4);
+    agregarKeyframe(&animaciones[4], kf4_5);
+    eliminarPersonaje(temp4);
+    animaciones_inicializadas = 1;
+}
+int ultima_escena_ejecutada = 0;
+
+//Decide que animacion va a usar
+void reproducirAnimacion(int indicePersonaje) {
+    if(indicePersonaje < 0 || indicePersonaje >= numPersonajes){ 
+        return;
+    }
+    
+    int indiceAnimacion = indicePersonaje; // Por defecto usa su propia animación
+    int debe_animar = 0; // Flag para saber si debe animar en esta escena
+    
+    // Decidir qué animación usar según la escena actual
+    if(escena_actual == 2) {
+        // ESCENA 2: Altar de muertos
+        debe_animar = 1;
+        if(indicePersonaje == 0) indiceAnimacion = 0;      
+        else if(indicePersonaje == 1) indiceAnimacion = 1; 
+        else if(indicePersonaje == 2) indiceAnimacion = 2; 
+        else if(indicePersonaje == 3) indiceAnimacion = 0;
+    }
+    else if(escena_actual == 4) {
+        debe_animar = 1;
+        if(indicePersonaje == 0) indiceAnimacion = 0;      
+        else if(indicePersonaje == 1) indiceAnimacion = 0; 
+        else if(indicePersonaje == 2) indiceAnimacion = 2; 
+        else if(indicePersonaje == 3) indiceAnimacion = 0; 
+    }
+    else if(escena_actual == 7) {
+        if(indicePersonaje == 3) {
+            debe_animar = 1;
+            indiceAnimacion = 3;
+        }
+    }
+    else if(escena_actual == 8) {
+        if(indicePersonaje == 0) {
+            debe_animar = 1;
+            indiceAnimacion = 2;
+        }
+    }
+    else if(escena_actual == 9) {
+        if(indicePersonaje == 2) {
+            debe_animar = 1;
+            indiceAnimacion = 1;
+        }
+    }
+    else if(escena_actual == 10) {
+        if(indicePersonaje == 0) {
+            debe_animar = 1;
+            indiceAnimacion = 4;
+        }
+    }
+    
+    // Si cambió la escena, reiniciar el tiempo de animación
+    if(escena_actual != ultima_escena_ejecutada) {
+        for(int i = 0; i < numPersonajes; i++) {
+            animaciones[i].tiempoAnimacion = 0.0;
+        }
+        ultima_escena_ejecutada = escena_actual;
+    }
+    
+    // Si no debe animar en esta escena, salir
+    if(!debe_animar) {
+        return;
+    }
+
+    AnimacionLista* anim = &animaciones[indiceAnimacion];
+    Personaje* p = personajes[indicePersonaje];
+    
+    // Incrementar tiempo de animación
+    anim->tiempoAnimacion += 0.05;
+    
+    // Buscar entre qué keyframes estamos
+    Keyframe* k1 = buscarKeyframeActual(anim);
+    if(k1 == NULL) {
+        // Si no hay keyframes, reiniciar
+        anim->tiempoAnimacion = 0.0;
+        return;
+    }
+    
+    Keyframe* k2 = k1->siguiente;
+    if(k2 == NULL) {
+        // Llegamos al último keyframe - MANTENER LA POSE FINAL
+        // Copiar los ángulos del último keyframe
+        p->anguloBrazoDer = k1->anguloBrazoDer;
+        p->anguloAntebrazoDer = k1->anguloAntebrazoDer;
+        p->anguloBrazoIzq = k1->anguloBrazoIzq;
+        p->anguloAntebrazoIzq = k1->anguloAntebrazoIzq;
+        p->anguloMusloDer = k1->anguloMusloDer;
+        p->anguloPantorrillaDer = k1->anguloPantorrillaDer;
+        p->anguloMusloIzq = k1->anguloMusloIzq;
+        p->anguloPantorrillaIzq = k1->anguloPantorrillaIzq;
+        p->posX = k1->posX;
+        p->posY = k1->posY;
+        
+        actualizarAngulosPersonaje(p);
+        return;
+    }
+    
+    // Interpolar entre k1 y k2
+    float duracion = k2->tiempo - k1->tiempo;
+    float tiempoLocal = anim->tiempoAnimacion - k1->tiempo;
+    float t = tiempoLocal / duracion;
+    
+    interpolarKeyframes(k1, k2, t, p);
+    actualizarAngulosPersonaje(p);
+}
+// Interpolar entre dos keyframes
+void interpolarKeyframes(Keyframe* k1, Keyframe* k2, float t, Personaje* p) {
+    if(k1 == NULL || k2 == NULL) return;
+    
+    if(t < 0.0) t = 0.0;
+    if(t > 1.0) t = 1.0;
+    
+    // Interpolar BRAZOS
+    p->anguloBrazoDer = k1->anguloBrazoDer + t * (k2->anguloBrazoDer - k1->anguloBrazoDer);
+    p->anguloAntebrazoDer = k1->anguloAntebrazoDer + t * (k2->anguloAntebrazoDer - k1->anguloAntebrazoDer);
+    p->anguloBrazoIzq = k1->anguloBrazoIzq + t * (k2->anguloBrazoIzq - k1->anguloBrazoIzq);
+    p->anguloAntebrazoIzq = k1->anguloAntebrazoIzq + t * (k2->anguloAntebrazoIzq - k1->anguloAntebrazoIzq);
+    
+    // Interpolar PIERNAS
+    p->anguloMusloDer = k1->anguloMusloDer + t * (k2->anguloMusloDer - k1->anguloMusloDer);
+    p->anguloPantorrillaDer = k1->anguloPantorrillaDer + t * (k2->anguloPantorrillaDer - k1->anguloPantorrillaDer);
+    p->anguloMusloIzq = k1->anguloMusloIzq + t * (k2->anguloMusloIzq - k1->anguloMusloIzq);
+    p->anguloPantorrillaIzq = k1->anguloPantorrillaIzq + t * (k2->anguloPantorrillaIzq - k1->anguloPantorrillaIzq);
+    
+    // Interpolar POSICIÓN
+    p->posX = k1->posX + t * (k2->posX - k1->posX);
+    p->posY = k1->posY + t * (k2->posY - k1->posY);
 }
 
 // IMPLEMENTACIÓN DE COLAS
-
 // Encolar una escena al final de la cola
 void encolarEscena(int num, float inicio, float fin, char* nombre, void (*func)(void)) {
     Escena* nueva = (Escena*)malloc(sizeof(Escena));
@@ -1361,13 +1531,14 @@ void renderizarEscenaActual() {
     
     colaEscenas.tiempoTotal = 0.0;
     tiempo_total = 0.0;
-    escena_actual = 1;
+    escena_actual = 0;  
     alpha_texto = 0.0;
     fantasma_x = -0.8;
     fantasma_oscilacion = 0.0;
     fantasma_escala_inicio = 0.3;
     fantasma_acercamiento = -1.2;
-    
+    fantasma_alejamiento = 2.5;  // Agregar si no está
+
     for(int i = 0; i < numPersonajes; i++) {
         animaciones[i].tiempoAnimacion = 0.0;
     }
@@ -1420,41 +1591,29 @@ void escena2_altar() {
     
     glPushMatrix();
         glTranslatef(0.0, -0.2, 0.0);
-        glScalef(0.9, 0.9, 1.0);
-        
         glPushMatrix();
-            glTranslatef(-0.70, 0.0, 0.0);
+            glTranslatef(-0.60, 0.0, 0.0);//pos de la roja
+            glScalef(0.9, 0.9, 1.0);
+            dibujarPersonaje(personajes[1]);
+        glPopMatrix();
+
+        glPushMatrix();
+            glTranslatef(-0.80, 0.0, 0.0);//posicion de la morada
+            glScalef(1.2, 1.2, 1.0);//(ancho, alto)
             dibujarPersonaje(personajes[0]);
         glPopMatrix();
         
-        glPushMatrix();
-            glTranslatef(-0.25, 0.0, 0.0);
-            dibujarPersonaje(personajes[1]);
-        glPopMatrix();
+        
         
         glPushMatrix();
-            glTranslatef(0.25, 0.0, 0.0);
-            double temp2_brazoDer = personajes[2]->anguloBrazoDer;
-            double temp2_antebrazoDer = personajes[2]->anguloAntebrazoDer;
-            double temp2_brazoIzq = personajes[2]->anguloBrazoIzq;
-            double temp2_antebrazoIzq = personajes[2]->anguloAntebrazoIzq;
-            
-            personajes[2]->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
-            personajes[2]->anguloAntebrazoDer = ANTEBRAZO_MIN * DEG_TO_RAD;
-            personajes[2]->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
-            personajes[2]->anguloAntebrazoIzq = ANTEBRAZO_MIN * DEG_TO_RAD;
-            
-            actualizarAngulosPersonaje(personajes[2]);
+            glTranslatef(0.75, 0.2, 0.0);//pos de la azul
+            glScalef(0.7, 0.7, 1.0);
             dibujarPersonaje(personajes[2]);
-            
-            personajes[2]->anguloBrazoDer = temp2_brazoDer;
-            personajes[2]->anguloAntebrazoDer = temp2_antebrazoDer;
-            personajes[2]->anguloBrazoIzq = temp2_brazoIzq;
-            personajes[2]->anguloAntebrazoIzq = temp2_antebrazoIzq;
         glPopMatrix();
         
         glPushMatrix();
-            glTranslatef(0.70, 0.0, 0.0);
+            glTranslatef(0.50, 0.0, 0.0);//pos de la verde,     quieta
+            glScalef(0.9, 0.9, 1.0);
             double temp3_brazoDer = personajes[3]->anguloBrazoDer;
             double temp3_antebrazoDer = personajes[3]->anguloAntebrazoDer;
             double temp3_brazoIzq = personajes[3]->anguloBrazoIzq;
@@ -1504,19 +1663,46 @@ void escena3_dialogo() {
 }
 
 void escena4_despedida() {
-    
-     if(texturas_cargadas >= 2 && texFondoEsc4.data != NULL) {
+    // Fondo
+    if(texturas_cargadas >= 2 && texFondoEsc4.data != NULL) {
         dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoEsc4);
     }
 
+    // AHORA CADA PERSONAJE TIENE SU PROPIA POSICIÓN Y ESCALA
     glPushMatrix();
-        glTranslatef(0.0, -0.3, 0.0); 
-        for(int i = 0; i < numPersonajes; i++) {
-            dibujarPersonaje(personajes[i]);
-        }
-
+        glTranslatef(0.0, -0.2, 0.0); // Ajuste general de altura
+        
+        // RUBI (Personaje 0 - Morado)
+        glPushMatrix();
+            glTranslatef(0.80, 0.0, 0.0);  // Posición izquierda
+            glScalef(0.9, 0.9, 1.0);         // Escala
+            dibujarPersonaje(personajes[0]);
+        glPopMatrix();
+        
+        // ROXANA (Personaje 1 - Rojo)
+        glPushMatrix();
+            glTranslatef(-0.25, 0.2, 0.0);   // Posición centro-izq
+            glScalef(0.6, 0.6, 1.0);
+            dibujarPersonaje(personajes[1]);
+        glPopMatrix();
+        
+        // REBECA (Personaje 2 - Azul)
+        glPushMatrix();
+            glTranslatef(-0.80, 0.0, 0.0);    // Posición centro-der
+            glScalef(0.9, 0.9, 1.0);
+            dibujarPersonaje(personajes[2]);
+        glPopMatrix();
+        
+        // RENATA (Personaje 3 - Verde)
+        glPushMatrix();
+            glTranslatef(0.25, 0.2, 0.0);    // Posición derecha
+            glScalef(0.6, 0.6, 1.0);
+            dibujarPersonaje(personajes[3]);
+        glPopMatrix();
+        
     glPopMatrix();
     
+    // Textos
     glColor3f(1.0, 1.0, 1.0);
     if(alpha_texto > 0.3) {
         dibujarTexto("Me encanta ponerle ofrenda,", -0.28, -0.7);
@@ -1529,22 +1715,33 @@ void escena5_fantasma_decision(void) {
         dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoSala);
     }
 
-    glPushMatrix();
-        glTranslatef(0.0, -0.45, 0.0);
-        glScalef(0.6, 0.6, 1.0);
-        for(int i = 0; i < numPersonajes; i++) {
-            dibujarPersonaje(personajes[i]);
-        }
+     // RUBI (Personaje 0 - Morado)
+        glPushMatrix();
+            glTranslatef(0.80, 0.0, 0.0);  // Posición izquierda
+            glScalef(0.9, 0.9, 1.0);         // Escala
+            dibujarPersonaje(personajes[0]);
+        glPopMatrix();
+        
+        
+        // REBECA (Personaje 2 - Azul)
+        glPushMatrix();
+            glTranslatef(-0.80, 0.0, 0.0);    // Posición centro-der
+            glScalef(0.9, 0.9, 1.0);
+            dibujarPersonaje(personajes[2]);
+        glPopMatrix();
+        
+            
     glPopMatrix();
+
     
 
     float offset_y = sin(fantasma_oscilacion) * 0.03;
-    dibujarFantasma(fantasma_acercamiento, 0.0 + offset_y, 1.2);
+    dibujarFantasma(fantasma_acercamiento, -0.6 + offset_y, 2.2);
     
     glColor3f(0.0, 0.0, 0.0);
     if(alpha_texto > 0.3) {
-        dibujarTexto("*Quiero quedarme mas tiempo con ellas!", fantasma_acercamiento - 0.35, 0.35);
-        dibujarTexto("*Si me quedo, no creo que noten que estoy aqui!", fantasma_acercamiento - 0.45, 0.25);
+        dibujarTexto("*Quiero quedarme mas tiempo con ellas!", fantasma_acercamiento - 0.35, 0.0);
+        dibujarTexto("*Si me quedo, no creo que noten que estoy aqui!", fantasma_acercamiento - 0.45, -0.10);
     }
 }
 
@@ -1616,14 +1813,14 @@ void escena9_mujer_azul_graduacion(void) {
     dibujarFantasma(-0.50, -0.40 + offset_y, 0.65);
     
     glPushMatrix();
-        glTranslatef(0.0, -0.25, 0.0);    
+        glTranslatef(-0.50, -0.25, 0.0);    
         glScalef(1.2, 1.2, 1.0);          
         dibujarPersonaje(personajes[2]);  
     glPopMatrix();
     
-    glColor3f(1.0, 1.0, 1.0);
+    glColor3f(0.0, 0.0, 0.0);
     if(alpha_texto > 0.3) {
-        dibujarTexto("Que daria por que", -0.95, 0.85);
+        dibujarTexto("*Que daria por que", -0.95, 0.85);
         dibujarTexto("estuvieras aqui", -0.95, 0.78);
     }
 }
@@ -1673,28 +1870,36 @@ void escena12_navidad_recuerdos(void) {
     dibujarFantasma(0.0, -0.2 + offset_y, 1.0);
     
     glPushMatrix();
-        glTranslatef(0.0, -0.45, 0.0);
-        glScalef(0.7, 0.7, 1.0);
+        glTranslatef(0.0, -0.2, 0.0); // Ajuste general de altura
         
+        // RUBI (Personaje 0 - Morado)
         glPushMatrix();
-            glTranslatef(-0.68, 0.0, 0.0);
-            dibujarPersonaje(personajes[0]); // Rubi (morada)
+            glTranslatef(0.80, 0.0, 0.0);  // Posición izquierda
+            glScalef(0.9, 0.9, 1.0);         // Escala
+            dibujarPersonaje(personajes[0]);
         glPopMatrix();
         
+        // ROXANA (Personaje 1 - Rojo)
         glPushMatrix();
-            glTranslatef(-0.28, 0.0, 0.0);
-            dibujarPersonaje(personajes[1]); // Roxana (roja)
+            glTranslatef(-0.25, 0.2, 0.0);   // Posición centro-izq
+            glScalef(0.6, 0.6, 1.0);
+            dibujarPersonaje(personajes[1]);
         glPopMatrix();
         
+        // REBECA (Personaje 2 - Azul)
         glPushMatrix();
-            glTranslatef(0.12, 0.0, 0.0);
-            dibujarPersonaje(personajes[2]); // Rebeca (azul)
+            glTranslatef(-0.90, 0.0, 0.0);    // Posición centro-der
+            glScalef(0.9, 0.9, 1.5);
+            dibujarPersonaje(personajes[2]);
         glPopMatrix();
         
+        // RENATA (Personaje 3 - Verde)
         glPushMatrix();
-            glTranslatef(-0.48, 0.0, 0.0);
-            dibujarPersonaje(personajes[3]); // Renata (verde)
+            glTranslatef(0.25, -0.2, 0.0);    // Posición derecha
+            glScalef(1.0, 1.0, 3.0);
+            dibujarPersonaje(personajes[3]);
         glPopMatrix();
+        
     glPopMatrix();
     
     glColor3f(0.2, 0.2, 0.2);
@@ -1717,31 +1922,41 @@ void escena13_cena_navidad(void) {
     float offset_y = sin(fantasma_oscilacion) * 0.02;
     dibujarFantasma(-0.8, -0.75 + offset_y, 1.5);
     
-    glPushMatrix();
-        glTranslatef(0.0, -0.40, 0.0);
-        glScalef(0.8, 0.8, 1.0);
+    
+
+ glPushMatrix();
+        glTranslatef(0.0, -0.2, 0.0); 
         
+        // RUBI (Personaje 0 - Morado)
         glPushMatrix();
-            glTranslatef(-0.55, 0.0, 0.0);
-            dibujarPersonaje(personajes[0]); // Rubi
+            glTranslatef(-0.55, 0.0, 0.0);  
+            glScalef(0.9, 0.9, 1.0);         // Escala
+            dibujarPersonaje(personajes[0]);
         glPopMatrix();
         
+        // ROXANA (Personaje 1 - Rojo)
         glPushMatrix();
-            glTranslatef(-0.20, 0.0, 0.0);
-            dibujarPersonaje(personajes[1]); // Roxana
+            glTranslatef(-0.20, 0.0, 0.0);  
+            glScalef(0.6, 0.6, 1.0); 
+            dibujarPersonaje(personajes[1]);
         glPopMatrix();
         
+        // REBECA (Personaje 2 - Azul)
         glPushMatrix();
-            glTranslatef(0.20, 0.0, 0.0);
-            dibujarPersonaje(personajes[2]); // Rebeca
+            glTranslatef(0.90, 0.0, 0.0);  
+            glScalef(0.9, 0.9, 1.5);
+            dibujarPersonaje(personajes[2]);
         glPopMatrix();
         
+        // RENATA (Personaje 3 - Verde)
         glPushMatrix();
             glTranslatef(0.55, 0.0, 0.0);
-            dibujarPersonaje(personajes[3]); // Renata
+            glScalef(1.0, 1.0, 3.0);
+            dibujarPersonaje(personajes[3]);
         glPopMatrix();
+        
     glPopMatrix();
-    
+
     glColor3f(0.2, 0.2, 0.2);
     if(alpha_texto > 0.2) {
         dibujarTexto("*Que rico quedo el espagueti!", -0.95, 0.65);
@@ -1801,30 +2016,39 @@ void escena15_despedida_hijas(void) {
     
     float offset_y = sin(fantasma_oscilacion) * 0.03;
     dibujarFantasma(0.0, 0.55 + offset_y, 1.5);
-    
+
+
     glPushMatrix();
-        glTranslatef(0.0, -0.20, 0.0);
-        glScalef(0.9, 0.9, 1.0);
+        glTranslatef(0.0, -0.2, 0.0); // Ajuste general de altura
         
+        // RUBI (Personaje 0 - Morado)
         glPushMatrix();
-            glTranslatef(-0.65, 0.0, 0.0);
-            dibujarPersonaje(personajes[0]); // Rubi
+            glTranslatef(-0.65, 0.0, 0.0);  
+            glScalef(0.9, 0.9, 1.0);         // Escala
+            dibujarPersonaje(personajes[0]);
         glPopMatrix();
         
+        // ROXANA (Personaje 1 - Rojo)
         glPushMatrix();
-            glTranslatef(-0.22, 0.0, 0.0);
-            dibujarPersonaje(personajes[1]); // Roxana
+            glTranslatef(-0.22, 0.0, 0.0);   
+            glScalef(0.6, 0.6, 1.0);
+            dibujarPersonaje(personajes[1]);
         glPopMatrix();
         
+        // REBECA (Personaje 2 - Azul)
         glPushMatrix();
-            glTranslatef(0.22, 0.0, 0.0);
-            dibujarPersonaje(personajes[2]); // Rebeca
+            glTranslatef(0.1, 0.0, 0.0);    
+            glScalef(0.9, 0.9, 1.5);
+            dibujarPersonaje(personajes[2]);
         glPopMatrix();
         
+        // RENATA (Personaje 3 - Verde)
         glPushMatrix();
-            glTranslatef(0.65, 0.0, 0.0);
-            dibujarPersonaje(personajes[3]); // Renata
+            glTranslatef(0.65, 0.0, 0.0);    
+            glScalef(1.0, 1.0, 3.0);
+            dibujarPersonaje(personajes[3]);
         glPopMatrix();
+        
     glPopMatrix();
     
     glColor3f(0.0, 0.0, 0.0);
@@ -1875,13 +2099,12 @@ void escena16_camino_mictlan(void) {
 
 
 void inicializarEscenas() {
-
+    // encolarEscena(número, INICIO, FIN, "nombre", función);
     encolarEscena(1, 0.0, 10.0, "Fantasma llegando", &escena1_presentacion);
     encolarEscena(2, 10.0, 25.0, "Altar de muertos", &escena2_altar);
     encolarEscena(3, 25.0, 35.0, "Fantasma habla", &escena3_dialogo);
     encolarEscena(4, 35.0, 45.0, "Mujeres hablan", &escena4_despedida);
     encolarEscena(5, 45.0, 55.0, "Fantasma decision", &escena5_fantasma_decision);
-    
     encolarEscena(6, 55.0, 60.0, "2 semanas despues...", &escena6_transicion_tiempo);
     
     encolarEscena(7, 60.0, 70.0, "Mujer verde cuarto", &escena7_mujer_verde_cuarto);
@@ -1896,7 +2119,8 @@ void inicializarEscenas() {
     
     encolarEscena(14, 145.0, 157.0, "Fantasma despedida", &escena14_fantasma_despedida);
     encolarEscena(15, 157.0, 169.0, "Hijas despedida", &escena15_despedida_hijas);
-    encolarEscena(16, 169.0, 180.0, "Camino Mictlan", &escena16_camino_mictlan);
+    encolarEscena(16, 169.0, 180.0, "Camino Mictlan", &escena16_camino_mictlan); 
+   
 }
 
 unsigned char* cargarBMP(const char* filename, int* width, int* height) {
@@ -2152,44 +2376,4 @@ void dibujarRectanguloTexturizado(float x, float y, float ancho, float alto, GLu
     glDisable(GL_TEXTURE_2D);
 }
 
-
-int main(int argc, char** argv) {
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
-    
-    glutInitWindowSize(900, 650);//tam de la ventana
-    glutInitWindowPosition(100, 50);
-    ventana_principal = glutCreateWindow("Personajes chavas");
-    
-    glClearColor(0.85, 0.9, 0.95, 1.0); 
-    inicializarTexturas();  // Cargar texturas al inici
-    //ejemplos de los personajes
-    personajes[numPersonajes++] = crearPersonaje("Rubi", 0.0, 0.0, 1.0, 0.55, 0.25, 0.85, 0);
-    personajes[numPersonajes++] = crearPersonaje("Roxana", -0.6, 0.0, 0.8, 0.9, 0.2, 0.3, 0);
-    personajes[numPersonajes++] = crearPersonaje("Rebeca", 0.6, 0.0, 0.8, 0.2, 0.4, 0.9, 0);
-    personajes[numPersonajes++] = crearPersonaje("Renata", -0.4, 0.3, 0.5, 0.3, 0.8, 0.4, 0);
-    
-    // Registrar callbacks
-    glutDisplayFunc(display);
-    glutIdleFunc(redibujo);
-    glutKeyboardFunc(teclado);
-    
-    // ventana de menu 
-    glutInitWindowSize(300, 550);
-    glutInitWindowPosition(1160, 100);
-    ventana_menu = glutCreateWindow("Menu ");
-    glClearColor(0.1, 0.1, 0.15, 1.0);
-    glutDisplayFunc(displayMenu);
-    glutKeyboardFunc(tecladoMenu);
-    glutSpecialFunc(tecladoEspecialMenu);
-    
-    printf("\nCONTROLES:\n");
-    printf("  ESPACIO - Pausar/Reanudar\n");
-    printf("  R - Reiniciar animacion\n");
-    printf("  M - Mostrar/Ocultar menu\n");
-    printf("  ESC - Salir\n");
-    
-    glutMainLoop();
-    return 0;
-}
 
