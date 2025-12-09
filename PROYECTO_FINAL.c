@@ -79,9 +79,7 @@ typedef struct Keyframe {
     double anguloPantorrillaDer;
     double anguloMusloIzq;
     double anguloPantorrillaIzq;
-    // CABEZA (ESTA AUN NO LA USO)
-    double anguloCabeza;
-    
+      
     // POS DEL PERSONAJE COMPLETO
     float posX;  
     float posY;
@@ -97,7 +95,6 @@ typedef struct AnimacionLista{
     int numKeyframes;               //cuantos fotogramas tiene la animacion 
     float tiempoAnimacion;          //total de duracion de la animacion
 } AnimacionLista;
-
 
 //esta es una strcu para la escenas que va a ir en la cola 
 typedef struct Escena {
@@ -123,9 +120,6 @@ typedef struct Textura{
     int width;//ancho de la textura en pix
     int height;//alto de la textura en pix
 } Textura;
-
-
-
 
 
 // proporciones inciiales del cuerpo
@@ -155,23 +149,22 @@ int menu_activo = 1;              // Visibilidad del menú
 AnimacionLista animaciones[10];  // Una animación por cada personaje
 int animaciones_inicializadas = 0;
 
-// Variables para las colas
+// variables de la cola
 ColaEscenas colaEscenas = {NULL, NULL, 0, 0.0};
 int escena_actual = 0;
 float alpha_texto = 0.0;  // Para efectos de fade in/out de textos
 
 float fantasma_oscilacion = 0.0;
-float fantasma_x = -1.2;
-float fantasma_y = 0.3;
+float fantasma_x = -0.8; //posicion horizontal 
+float fantasma_y = 0.1;     //posicion vertical
 float fantasma_acercamiento = -1.2;
-float fantasma_arbol_x = 0.5;
-float tiempo_total = 0.0; 
+float fantasma_escala_inicio = 0.3;  //tam de como ainicia su aparicion
+float tiempo_total = 0.0;
+float fantasma_alejamiento = 2.5;
 
-
-//esto es para las texturas
-GLuint texturaInicioMictlan; 
-Textura texInicioMictlan;
 int texturas_cargadas = 0;
+GLuint texturaInicioMictlan;  
+Textura texInicioMictlan;
 GLuint texturaFondoSala;
 Textura texFondoSala;
 GLuint texturaAltar;
@@ -188,6 +181,14 @@ GLuint texturaFondoNoche;
 Textura texFondoNoche;
 GLuint texturaFondoFantasma;
 Textura texFondoFantasma;
+GLuint texturaFondoCenaNavidad;
+Textura texFondoCenaNavidad;
+GLuint texturaFondoArbol;
+Textura texFondoArbol;
+GLuint texturaFondoEsc4;
+Textura texFondoEsc4;
+GLuint texturafondoEsc7;
+Textura texfondoEsc7;
 
 double limitarAngulo(double angulo, double min, double max);
 void dibujarCirculo(float x, float y, float radio, int segmentos);
@@ -197,22 +198,55 @@ Nodo* crearNodo(char* nombre, double tx, double ty, double longitud, double angu
 void agregarHijo(Nodo* padre, Nodo* hijo);
 void construirArbolPersonaje(Personaje* p);
 void liberarArbol(Nodo* nodo);
+void actualizarAngulosEnNodos(Nodo* nodo, Personaje* p);
+void actualizarAngulosPersonaje(Personaje* p);
 void dibujarVestidoPersonaje(Personaje* p);
 void dibujarCabezaPersonaje(Personaje* p);
 void dibujarNodoPersonaje(Nodo* nodo);
-void actualizarAngulosPersonaje(Personaje* p);
-void animarPersonaje(Personaje* p);
 void dibujarPersonaje(Personaje* p);
+Personaje* crearPersonaje(char* nombre, double x, double y, double escala, float r, float g, float b, int tipoAnimacion);
+void eliminarPersonaje(Personaje* p);
+void display();
+void dibujarTexto(char *texto, float x, float y);
+void dibujarRectangulo(float x, float y, float ancho, float alto);
+void dibujarFantasma(float x, float y, float escala);
+void dibujarGorroNavidad(float x, float y, float escala);
+void redibujo();
+void teclado(unsigned char key, int x, int y);
 void dibujarBotonMenu(float x, float y, float ancho, float alto, char *texto, int seleccionado);
 void displayMenu(void);
 void tecladoMenu(unsigned char key, int x, int y);
 void tecladoEspecialMenu(int key, int x, int y);
-Personaje* crearPersonaje(char* nombre, double x, double y, double escala, float r, float g, float b, int tipoAnimacion);
-void eliminarPersonaje(Personaje* p);
-void display();
-void redibujo();
-void teclado(unsigned char key, int x, int y);
-void dibujarFlor(float x, float y, float radio, float r, float g, float b);
+Keyframe* crearKeyframe(float tiempo, Personaje* p);
+void agregarKeyframe(AnimacionLista* anim, Keyframe* kf);
+void liberarAnimacion(AnimacionLista* anim);
+void interpolarKeyframes(Keyframe* k1, Keyframe* k2, float t, Personaje* p);
+Keyframe* buscarKeyframeActual(AnimacionLista* anim);
+void reproducirAnimacion(int indicePersonaje);
+void inicializarAnimaciones();
+void encolarEscena(int num, float inicio, float fin, char* nombre, void (*func)(void));
+void liberarCola();
+void renderizarEscenaActual();
+void escena1_presentacion();
+void escena2_altar();
+void escena3_dialogo();
+void escena4_despedida();
+void escena5_fantasma_decision(void);
+void escena6_transicion_tiempo(void);
+void escena7_mujer_verde_cuarto(void);
+void escena8_mujer_rosa_oficina(void);
+void escena9_mujer_azul_graduacion(void);
+void escena10_mujer_morado_computadora(void);
+void escena11_transicion_navidad(void);
+void escena12_navidad_recuerdos(void);
+void escena13_cena_navidad(void);
+void escena14_fantasma_despedida(void);
+void escena15_despedida_hijas(void);
+void escena16_camino_mictlan(void);
+void inicializarEscenas();
+unsigned char* cargarBMP(const char* filename, int* width, int* height);
+void inicializarTexturas();
+void dibujarRectanguloTexturizado(float x, float y, float ancho, float alto, GLuint textura);
 
 
 // Limita un ángulo al rango permitido
@@ -234,7 +268,7 @@ void dibujarCirculo(float x, float y, float radio, int segmentos) {
     glEnd();
 }
 
-// Dibuja una línea entre dos puntos
+//esto es lo que siempre uso en mis programas
 void dibujarLinea(float x1, float y1, float x2, float y2) {
     glBegin(GL_LINES);
         glVertex2f(x1, y1);
@@ -326,7 +360,7 @@ void construirArbolPersonaje(Personaje* p) {
     Nodo* pieDer = crearNodo("Pie Derecho", 0, -longPantorrillaDer, 0, 0);
     agregarHijo(pantorrillaDer, pieDer);
     
-    // PIERNA IZQUIERDA: Torso -> Muslo -> Pantorrilla -> Pie
+    // PIERNA IZQUIERDA: Torso - Muslo -Pantorrilla - Pie
     Nodo* piernaIzq = crearNodo("Pierna Izquierda", inicioMusloIzq[0], inicioMusloIzq[1], longMusloIzq, p->anguloMusloIzq);
     agregarHijo(p->torso, piernaIzq);
     Nodo* pantorrillaIzq = crearNodo("Pantorrilla Izquierda", 0, -longMusloIzq, longPantorrillaIzq, p->anguloPantorrillaIzq);
@@ -404,44 +438,107 @@ void dibujarVestidoPersonaje(Personaje* p) {
 
 
 void dibujarCabezaPersonaje(Personaje* p) {
-    glColor3f(0.95, 0.87, 0.78);
+    // Guardar la matriz actual
+    glPushMatrix();
+    
+    // Mover al centro de la cabeza (posición más baja)
+    glTranslatef(centroTorso[0], centroTorso[1] - 0.05, 0);
+    
+    // Dibujar cabello (parte de atrás)
+    glColor3f(0.15, 0.10, 0.08); // Color café oscuro para el cabello
+    dibujarCirculo(0, 0.36, 0.095, 30);
+    
+    // Dibujar cara
+    glColor3f(0.95, 0.87, 0.78); // Color piel
+    dibujarCirculo(0, 0.36, 0.08, 30);
+    
+    // Dibujar ojos ovalados
+    glColor3f(1, 1, 1); // Blanco de los ojos
+    // Ojo izquierdo (óvalo horizontal)
+    glPushMatrix();
+    glTranslatef(-0.03, 0.37, 0);
+    glScalef(1.5, 1.0, 1.0); // Achatamos el círculo horizontalmente
+    dibujarCirculo(0, 0, 0.02, 16);
+    glPopMatrix();
+    
+    // Ojo derecho (óvalo horizontal)
+    glPushMatrix();
+    glTranslatef(0.03, 0.37, 0);
+    glScalef(1.5, 1.0, 1.0); // Achatamos el círculo horizontalmente
+    dibujarCirculo(0, 0, 0.02, 16);
+    glPopMatrix();
+    
+    // Pupilas (también ovaladas)
+    glColor3f(0, 0, 0); // Negro
+    // Pupila izquierda
+    glPushMatrix();
+    glTranslatef(-0.03, 0.37, 0);
+    glScalef(1.5, 1.0, 1.0);
+    dibujarCirculo(0, 0, 0.01, 12);
+    glPopMatrix();
+    
+    // Pupila derecha
+    glPushMatrix();
+    glTranslatef(0.03, 0.37, 0);
+    glScalef(1.5, 1.0, 1.0);
+    dibujarCirculo(0, 0, 0.01, 12);
+    glPopMatrix();
+    
+    // Boca sonriente (curva suave)
+    glColor3f(0.8, 0.2, 0.2); // Rojo para la boca
+    glLineWidth(2.0);
+    glBegin(GL_LINE_STRIP);
+    for (float i = -0.04; i <= 0.04; i += 0.01) {
+        float y = 0.33 - 0.02 * (1 - i*i/0.0016); // Curva más pronunciada
+        glVertex2f(i, y);
+    }
+    glEnd();
+    
+
+    // Dibujar cuello
+    glColor3f(0.95, 0.87, 0.78); // Color piel
     float cuelloPersona[][2] = {
-        {-0.025 + centroTorso[0], 0.22 + centroTorso[1]},
-        {0.025 + centroTorso[0], 0.22 + centroTorso[1]},
-        {0.025 + centroTorso[0], 0.26 + centroTorso[1]},
-        {-0.025 + centroTorso[0], 0.26 + centroTorso[1]}
+        {-0.025, 0.22},
+        {0.025, 0.22},
+        {0.025, 0.26},
+        {-0.025, 0.26}
     };
     dibujarPoligono(cuelloPersona, 4);
     
-    dibujarCirculo(centroTorso[0], 0.36 + centroTorso[1], 0.08, 30);
+    // Restaurar la matriz
+    glPopMatrix();
     
-    glColor3f(0.15, 0.10, 0.08);
-    dibujarCirculo(centroTorso[0], 0.37 + centroTorso[1], 0.095, 30);
+    // Dibujar mechones de cabello que sobresalen
+    glPushMatrix();
+    glTranslatef(centroTorso[0], centroTorso[1], 0);
     
+    // Mechón izquierdo
     float mechonIzq[][2] = {
-        {-0.08 + centroTorso[0], 0.36 + centroTorso[1]},
-        {-0.10 + centroTorso[0], 0.30 + centroTorso[1]},
-        {-0.11 + centroTorso[0], 0.20 + centroTorso[1]},
-        {-0.10 + centroTorso[0], 0.19 + centroTorso[1]},
-        {-0.08 + centroTorso[0], 0.28 + centroTorso[1]},
-        {-0.075 + centroTorso[0], 0.34 + centroTorso[1]}
+        {-0.08, 0.36},
+        {-0.10, 0.30},
+        {-0.11, 0.20},
+        {-0.10, 0.19},
+        {-0.08, 0.28},
+        {-0.075, 0.34}
     };
+    glColor3f(0.15, 0.10, 0.08);
     dibujarPoligono(mechonIzq, 6);
     
+    // Mechón derecho
     float mechonDer[][2] = {
-        {0.08 + centroTorso[0], 0.36 + centroTorso[1]},
-        {0.10 + centroTorso[0], 0.30 + centroTorso[1]},
-        {0.11 + centroTorso[0], 0.20 + centroTorso[1]},
-        {0.10 + centroTorso[0], 0.19 + centroTorso[1]},
-        {0.08 + centroTorso[0], 0.28 + centroTorso[1]},
-        {0.075 + centroTorso[0], 0.34 + centroTorso[1]}
+        {0.08, 0.36},
+        {0.10, 0.30},
+        {0.11, 0.20},
+        {0.10, 0.19},
+        {0.08, 0.28},
+        {0.075, 0.34}
     };
     dibujarPoligono(mechonDer, 6);
     
-   
+    glPopMatrix();
 }
 
-// Dibuja recursivamente un nodo y sus hijos (recorrido del árbol)
+// Dibuja un nodo del árbol jerárquico y sus hijos
 void dibujarNodoPersonaje(Nodo* nodo) {
     if (nodo == NULL) return;
     
@@ -488,43 +585,6 @@ void dibujarNodoPersonaje(Nodo* nodo) {
     dibujarNodoPersonaje(nodo->siguienteHermano);
 }
 
-// ANIMACIONES: si me da timepo meto mas, si no pues no ajsjajaj
-void animarPersonaje(Personaje* p) {
-    if (!p->animando) return;
-    
-    double rango_brazo = (BRAZO_MAX - BRAZO_MIN) * DEG_TO_RAD;
-    double centro_brazo = (BRAZO_MAX + BRAZO_MIN) * 0.5 * DEG_TO_RAD;
-    double rango_antebrazo = (ANTEBRAZO_MAX - ANTEBRAZO_MIN) * DEG_TO_RAD;
-    double centro_antebrazo = (ANTEBRAZO_MAX + ANTEBRAZO_MIN) * 0.5 * DEG_TO_RAD;
-    
-    switch(p->tipoAnimacion) {
-        case 0: // Estático
-            break;
-            
-        case 1: // Saludo con ambos brazos
-            p->anguloBrazoDer = centro_brazo + sin(p->tiempoAnimacion * 2.0) * (rango_brazo * 0.4);
-            p->anguloAntebrazoDer = centro_antebrazo + sin(p->tiempoAnimacion * 3.0) * (rango_antebrazo * 0.35);
-            p->anguloBrazoIzq = centro_brazo + sin(p->tiempoAnimacion * 2.0 + PI) * (rango_brazo * 0.35);
-            p->anguloAntebrazoIzq = centro_antebrazo + sin(p->tiempoAnimacion * 2.5 + PI/2) * (rango_antebrazo * 0.3);
-            break;
-            
-        case 2: // Brazos arriba (celebración)
-            p->anguloBrazoDer = BRAZO_MAX * DEG_TO_RAD + sin(p->tiempoAnimacion * 3.0) * 0.2;
-            p->anguloAntebrazoDer = ANTEBRAZO_MAX * DEG_TO_RAD;
-            p->anguloBrazoIzq = BRAZO_MAX * DEG_TO_RAD + sin(p->tiempoAnimacion * 3.0 + PI) * 0.2;
-            p->anguloAntebrazoIzq = ANTEBRAZO_MAX * DEG_TO_RAD;
-            break;
-            
-        case 3: // Movimiento suave
-            p->anguloBrazoDer = centro_brazo + sin(p->tiempoAnimacion * 1.0) * (rango_brazo * 0.2);
-            p->anguloAntebrazoDer = centro_antebrazo + sin(p->tiempoAnimacion * 1.5) * (rango_antebrazo * 0.15);
-            p->anguloBrazoIzq = centro_brazo + sin(p->tiempoAnimacion * 1.0 + PI/3) * (rango_brazo * 0.2);
-            p->anguloAntebrazoIzq = centro_antebrazo + sin(p->tiempoAnimacion * 1.5 + PI/3) * (rango_antebrazo * 0.15);
-            break;
-    }
-    
-    actualizarAngulosPersonaje(p);
-}
 
 // Dibuja el personaje completo con todas sus transformaciones
 void dibujarPersonaje(Personaje* p) {
@@ -585,15 +645,21 @@ void eliminarPersonaje(Personaje* p) {
     free(p);
 }
 
-// Dibuja la escena de animación
 void display() {
-    glClear(GL_COLOR_BUFFER_BIT);  // Limpiar pantalla
+    glClear(GL_COLOR_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     
-    // Dibujar todos los personajes activos
-    for(int i = 0; i < numPersonajes; i++) {
-        dibujarPersonaje(personajes[i]);
+    // Renderizar la escena actual de la cola
+    renderizarEscenaActual();
+    
+    // Indicador de información
+    glColor3f(0.5, 0.5, 0.5);
+    glRasterPos2f(-0.98, 0.95);
+    char info[100];
+    sprintf(info, "Escena %d | Tiempo: %.1fs", escena_actual, colaEscenas.tiempoTotal);
+    for(int i = 0; info[i] != '\0'; i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, info[i]);
     }
     
     // Indicador de pausa
@@ -610,14 +676,23 @@ void display() {
 }
 
 
+void dibujarTexto(char *texto, float x, float y) {
+    glRasterPos2f(x, y);
+    for(int i = 0; texto[i] != '\0'; i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, texto[i]);
+    }
+}
+
+void dibujarRectangulo(float x, float y, float ancho, float alto) {
+    glBegin(GL_QUADS);
+        glVertex2f(x, y);
+        glVertex2f(x + ancho, y);
+        glVertex2f(x + ancho, y + alto);
+        glVertex2f(x, y + alto);
+    glEnd();
+}
 
 
-
-
-
-
-
-//MI PERSONAJE PRINCIPAL Q AUN NO ENTRA EN ESCENA
 void dibujarFantasma(float x, float y, float escala) {
     glColor3f(0.95, 0.95, 1.0);
     dibujarCirculo(x, y + 0.05 * escala, 0.08 * escala, 30);
@@ -680,23 +755,59 @@ void dibujarGorroNavidad(float x, float y, float escala) {
     dibujarCirculo(x, y + 0.15 * escala, 0.025 * escala, 15);
 }
 
-
-
-// se redibuja contienuamente 
 void redibujo() {
-    Sleep(30); 
+    Sleep(30);
     
-    // Solo actualizar si no está pausado
-    if(!animacion_pausada) {
-        for(int i = 0; i < numPersonajes; i++) {
-            if(personajes[i]->animando) {
-                personajes[i]->tiempoAnimacion += 0.05;
-                animarPersonaje(personajes[i]);
-            }
-        }
+    if(!animaciones_inicializadas) {
+        inicializarAnimaciones();
+        inicializarEscenas();
     }
     
-    glutPostRedisplay();  // Solicitar redibujo
+    if(!animacion_pausada) {
+        colaEscenas.tiempoTotal += 0.03;
+        tiempo_total += 0.03;
+        
+        for(int i = 0; i < numPersonajes; i++) {
+            if(animaciones[i].numKeyframes > 0) {
+                reproducirAnimacion(i);
+            }
+        }
+        
+        fantasma_oscilacion += 0.1;
+        
+        if(escena_actual == 1) {
+        if(fantasma_escala_inicio < 2.5) {  
+            fantasma_escala_inicio += 0.015;
+        }
+        
+        if(fantasma_escala_inicio > 0.8) {  
+            alpha_texto = (fantasma_escala_inicio - 0.8) / 1.7;
+            if(alpha_texto > 1.0) alpha_texto = 1.0;
+        } else {
+            alpha_texto = 0.0;
+        }
+        } else {
+            alpha_texto = 1.0;
+        }
+        if(escena_actual == 5 && fantasma_acercamiento < 0.0) {
+            fantasma_acercamiento += 0.01;
+        }
+        else if(escena_actual == 16) {
+            if(fantasma_alejamiento > 0.3) {  // Se va encogiendo
+                fantasma_alejamiento -= 0.012;  // Velocidad de alejamiento
+            }
+            
+            if(fantasma_alejamiento < 1.0) {
+                alpha_texto = fantasma_alejamiento / 1.0;
+            } else {
+                alpha_texto = 1.0;
+            }
+        }
+        else {
+            alpha_texto = 1.0;
+        }
+    }
+    glutPostRedisplay();
 }
 
 // Manejo de teclado en ventana principal
@@ -715,9 +826,22 @@ void teclado(unsigned char key, int x, int y) {
         glutSetWindow(ventana_principal);
     }
     else if(key == 'r' || key == 'R') {  
+    // Reiniciar animaciones
         for(int i = 0; i < numPersonajes; i++) {
-            personajes[i]->tiempoAnimacion = 0.0;
+            animaciones[i].tiempoAnimacion = 0.0;
         }
+        
+        // Reiniciar escenas y variables
+        colaEscenas.tiempoTotal = 0.0;
+        tiempo_total = 0.0;
+        escena_actual = 1;
+        alpha_texto = 0.0;
+        fantasma_x = -0.8;
+        fantasma_oscilacion = 0.0;
+        fantasma_escala_inicio = 0.3;
+        fantasma_acercamiento = -1.2;
+        fantasma_alejamiento = 2.5;
+        
         animacion_pausada = 0;
         printf("Animacion REINICIADA\n");
         
@@ -765,12 +889,10 @@ void dibujarBotonMenu(float x, float y, float ancho, float alto, char *texto, in
         glVertex2f(x + ancho, y + alto);
         glVertex2f(x, y + alto);
     glEnd();
-    
-    // Texto
     if(seleccionado) {
-        glColor3f(1.0, 1.0, 1.0);  // Blanco si seleccionado
+        glColor3f(1.0, 1.0, 1.0);  
     } else {
-        glColor3f(0.8, 0.8, 0.8);  // Gris claro normal
+        glColor3f(0.8, 0.8, 0.8);  
     }
     
     glRasterPos2f(x + 0.05, y + alto * 0.6);
@@ -783,29 +905,19 @@ void dibujarBotonMenu(float x, float y, float ancho, float alto, char *texto, in
 void displayMenu(void) {
     glClear(GL_COLOR_BUFFER_BIT);
     
-    // Fondo degradado
-    glBegin(GL_QUADS);
-        glColor3f(0.1, 0.1, 0.15);
-        glVertex2f(-1.0, -1.0);
-        glVertex2f(1.0, -1.0);
-        glColor3f(0.05, 0.05, 0.1);
-        glVertex2f(1.0, 1.0);
-        glVertex2f(-1.0, 1.0);
-    glEnd();
-    
     // Título
     glColor3f(1.0, 0.6, 0.0);
-    glRasterPos2f(-0.65, 0.85);
+    glRasterPos2f(-0.75, 0.85);
     char titulo[] = "CONTROL DE ANIMACION";
     for(int i = 0; titulo[i] != '\0'; i++) {
         glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, titulo[i]);
     }
     
-    // Botones (estructura de menú)
+    // Botones 
     float y_base = 0.50;
     float espaciado = 0.22;
     
-    dibujarBotonMenu(-0.85, y_base, 1.70, 0.18, animacion_pausada ? "REANUDAR" : "REPRODUCIR", opcion_seleccionada == 0);
+    dibujarBotonMenu(-0.85, y_base, 1.70, 0.18, "REPRODUCIR", opcion_seleccionada == 0);
     dibujarBotonMenu(-0.85, y_base - espaciado, 1.70, 0.18, "PAUSAR", opcion_seleccionada == 1);
     dibujarBotonMenu(-0.85, y_base - espaciado * 2, 1.70, 0.18, "REINICIAR", opcion_seleccionada == 2);
     dibujarBotonMenu(-0.85, y_base - espaciado * 3, 1.70, 0.18, "SALIR", opcion_seleccionada == 3);
@@ -857,15 +969,23 @@ void tecladoMenu(unsigned char key, int x, int y) {
                 animacion_pausada = 1;
                 printf("Animacion PAUSADA\n");
                 break;
-            case 2:  
+            case 2:  // REINICIAR
                 for(int i = 0; i < numPersonajes; i++) {
                     personajes[i]->tiempoAnimacion = 0.0;
                 }
+                colaEscenas.tiempoTotal = 0.0;
+                tiempo_total = 0.0;
+                escena_actual = 1;
+                alpha_texto = 0.0;
+                fantasma_x = -1.2;
+                fantasma_oscilacion = 0.0;
+                fantasma_escala_inicio = 0.3;
+                fantasma_acercamiento = -1.2;
                 animacion_pausada = 0;
                 printf("Animacion REINICIADA\n");
+                
                 break;
-            case 3:  
-                printf("Saliendo del programa...\n");
+            case 3:  // SALIR
                 for(int i = 0; i < numPersonajes; i++) {
                     eliminarPersonaje(personajes[i]);
                 }
@@ -905,20 +1025,1148 @@ void tecladoEspecialMenu(int key, int x, int y) {
     glutPostRedisplay();
 }
 
+// Crear un keyframe copiando el estado actual del personaje
+Keyframe* crearKeyframe(float tiempo, Personaje* p) {
+    Keyframe* nuevo = (Keyframe*)malloc(sizeof(Keyframe));
+    if(nuevo == NULL) {
+        printf("Error: No se pudo crear keyframe\n");
+        return NULL;
+    }
+    
+    nuevo->tiempo = tiempo;
+    
+    // Copiar todos los ángulos
+    nuevo->anguloBrazoDer = p->anguloBrazoDer;
+    nuevo->anguloAntebrazoDer = p->anguloAntebrazoDer;
+    nuevo->anguloBrazoIzq = p->anguloBrazoIzq;
+    nuevo->anguloAntebrazoIzq = p->anguloAntebrazoIzq;
+    nuevo->anguloMusloDer = p->anguloMusloDer;
+    nuevo->anguloPantorrillaDer = p->anguloPantorrillaDer;
+    nuevo->anguloMusloIzq = p->anguloMusloIzq;
+    nuevo->anguloPantorrillaIzq = p->anguloPantorrillaIzq;
+    
+    // Copiar posición
+    nuevo->posX = p->posX;
+    nuevo->posY = p->posY;
+    
+    nuevo->siguiente = NULL;
+    
+    return nuevo;
+}
+
+// Agregar keyframe al final de la lista
+void agregarKeyframe(AnimacionLista* anim, Keyframe* kf) {
+    if(kf == NULL) return;
+    
+    if(anim->primerKeyframe == NULL) {
+        // Lista vacía
+        anim->primerKeyframe = kf;
+        anim->keyframeActual = kf;
+    } else {
+        // Buscar el último
+        Keyframe* actual = anim->primerKeyframe;
+        while(actual->siguiente != NULL) {
+            actual = actual->siguiente;
+        }
+        actual->siguiente = kf;
+    }
+    
+    anim->numKeyframes++;
+}
+
+// Liberar toda la lista de keyframes
+void liberarAnimacion(AnimacionLista* anim) {
+    Keyframe* actual = anim->primerKeyframe;
+    while(actual != NULL) {
+        Keyframe* siguiente = actual->siguiente;
+        free(actual);
+        actual = siguiente;
+    }
+    anim->primerKeyframe = NULL;
+    anim->keyframeActual = NULL;
+    anim->numKeyframes = 0;
+}
+
+// Interpolar entre dos keyframes
+void interpolarKeyframes(Keyframe* k1, Keyframe* k2, float t, Personaje* p) {
+    if(k1 == NULL || k2 == NULL) return;
+    
+    // Clampear t entre 0 y 1
+    if(t < 0.0) t = 0.0;
+    if(t > 1.0) t = 1.0;
+    
+    // Interpolar BRAZOS
+    p->anguloBrazoDer = k1->anguloBrazoDer + t * (k2->anguloBrazoDer - k1->anguloBrazoDer);
+    p->anguloAntebrazoDer = k1->anguloAntebrazoDer + t * (k2->anguloAntebrazoDer - k1->anguloAntebrazoDer);
+    p->anguloBrazoIzq = k1->anguloBrazoIzq + t * (k2->anguloBrazoIzq - k1->anguloBrazoIzq);
+    p->anguloAntebrazoIzq = k1->anguloAntebrazoIzq + t * (k2->anguloAntebrazoIzq - k1->anguloAntebrazoIzq);
+    
+    // Interpolar PIERNAS
+    p->anguloMusloDer = k1->anguloMusloDer + t * (k2->anguloMusloDer - k1->anguloMusloDer);
+    p->anguloPantorrillaDer = k1->anguloPantorrillaDer + t * (k2->anguloPantorrillaDer - k1->anguloPantorrillaDer);
+    p->anguloMusloIzq = k1->anguloMusloIzq + t * (k2->anguloMusloIzq - k1->anguloMusloIzq);
+    p->anguloPantorrillaIzq = k1->anguloPantorrillaIzq + t * (k2->anguloPantorrillaIzq - k1->anguloPantorrillaIzq);
+    
+    // Interpolar POSICIÓN
+    p->posX = k1->posX + t * (k2->posX - k1->posX);
+    p->posY = k1->posY + t * (k2->posY - k1->posY);
+}
+
+// Buscar entre qué keyframes estamos
+Keyframe* buscarKeyframeActual(AnimacionLista* anim) {
+    Keyframe* actual = anim->primerKeyframe;
+    Keyframe* anterior = NULL;
+    
+    while(actual != NULL) {
+        if(actual->tiempo > anim->tiempoAnimacion) {
+            return anterior; // Retornar el keyframe anterior
+        }
+        anterior = actual;
+        actual = actual->siguiente;
+    }
+    
+    return anterior; // Último keyframe
+}
+
+void reproducirAnimacion(int indicePersonaje) {
+    if(indicePersonaje < 0 || indicePersonaje >= numPersonajes){ 
+        return;
+    }
+    
+    int indiceAnimacion = indicePersonaje; // Por defecto usa su propia animación
+    
+    // Cambiar animación según la escena actual
+    if(escena_actual == 2) {
+        // ESCENA 2: Altar de muertos - Cada una hace algo diferente
+        if(indicePersonaje == 0) indiceAnimacion = 0;      // Rubi: levanta brazos
+        else if(indicePersonaje == 1) indiceAnimacion = 1; // Roxana: camina
+        else if(indicePersonaje == 2) indiceAnimacion = 4; // Rebeca: saluda
+        else if(indicePersonaje == 3) indiceAnimacion = 5; // Renata: baila
+    }
+    else if(escena_actual == 7) {
+        // ESCENA 7: Renata en su cuarto
+        if(indicePersonaje == 3) indiceAnimacion = 6; // Renata: sentada escribiendo
+    }
+    else if(escena_actual == 8) {
+        // ESCENA 8: Rubi en oficina
+        if(indicePersonaje == 0) indiceAnimacion = 7; // Rubi: trabajando
+    }
+    else if(escena_actual == 9) {
+        // ESCENA 9: Rebeca en graduación
+        if(indicePersonaje == 2) indiceAnimacion = 8; // Rebeca: camina y saluda
+    }
+
+    AnimacionLista* anim = &animaciones[indiceAnimacion];
+    Personaje* p = personajes[indicePersonaje];
+    
+
+    anim->tiempoAnimacion += 0.05;
+    
+    Keyframe* k1 = buscarKeyframeActual(anim);
+    if(k1 == NULL) {
+        anim->tiempoAnimacion = 0.0;
+        return;
+    }
+    
+    Keyframe* k2 = k1->siguiente;
+    if(k2 == NULL) {
+        anim->tiempoAnimacion = 0.0;
+        return;
+    }
+    
+    float duracion = k2->tiempo - k1->tiempo;
+    float tiempoLocal = anim->tiempoAnimacion - k1->tiempo;
+    float t = tiempoLocal / duracion;
+    
+    interpolarKeyframes(k1, k2, t, p);
+    actualizarAngulosPersonaje(p);
+}
+
+void inicializarAnimaciones() {
+    if(animaciones_inicializadas){
+        return;
+    }
+    
+    for(int i = 0; i < 10; i++) {
+        animaciones[i].primerKeyframe = NULL;
+        animaciones[i].keyframeActual = NULL;
+        animaciones[i].numKeyframes = 0;
+        animaciones[i].tiempoAnimacion = 0.0;
+    }
+
+    // ANIMACIÓN 0: Rubi levanta brazos 
+    Personaje* temp0 = crearPersonaje("Temp", 0.0, 0.0, 1.0, 0.55, 0.25, 0.85, 0);
+    temp0->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
+    temp0->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
+    Keyframe* kf0_1 = crearKeyframe(0.0, temp0);
+    agregarKeyframe(&animaciones[0], kf0_1);
+    
+    temp0->anguloBrazoDer = BRAZO_MAX * DEG_TO_RAD * 0.8;
+    temp0->anguloAntebrazoDer = ANTEBRAZO_MAX * DEG_TO_RAD * 0.6;   
+    Keyframe* kf0_2 = crearKeyframe(2.0, temp0);
+    agregarKeyframe(&animaciones[0], kf0_2);
+    
+    temp0->anguloBrazoIzq = BRAZO_MAX * DEG_TO_RAD * 0.8;
+    temp0->anguloAntebrazoIzq = ANTEBRAZO_MAX * DEG_TO_RAD * 0.6;
+    Keyframe* kf0_3 = crearKeyframe(4.0, temp0);
+    agregarKeyframe(&animaciones[0], kf0_3);
+    
+    temp0->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
+    temp0->anguloAntebrazoDer = ANTEBRAZO_MIN * DEG_TO_RAD;
+    temp0->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
+    temp0->anguloAntebrazoIzq = ANTEBRAZO_MIN * DEG_TO_RAD;
+    Keyframe* kf0_4 = crearKeyframe(6.0, temp0);
+    agregarKeyframe(&animaciones[0], kf0_4);
+    
+    eliminarPersonaje(temp0);
+    
+    // ANIMACIÓN 1: Roxana camina 
+    Personaje* temp1 = crearPersonaje("Temp", -0.6, 0.0, 0.8, 0.9, 0.2, 0.3, 0);
+
+    // Keyframe 1
+    temp1->posX = -0.4;
+    temp1->anguloMusloDer = MUSLO_MIN * DEG_TO_RAD;
+    temp1->anguloMusloIzq = MUSLO_MAX * DEG_TO_RAD * 0.3;
+    Keyframe* kf1_1 = crearKeyframe(0.0, temp1);
+    agregarKeyframe(&animaciones[1], kf1_1);
+
+    // Keyframe 2
+    temp1->posX = 0.0;
+    temp1->anguloMusloDer = MUSLO_MAX * DEG_TO_RAD * 0.3;
+    temp1->anguloMusloIzq = MUSLO_MIN * DEG_TO_RAD;
+    Keyframe* kf1_2 = crearKeyframe(3.0, temp1);
+    agregarKeyframe(&animaciones[1], kf1_2);
+
+    // Keyframe 3
+    temp1->posX = 0.4;
+    temp1->anguloMusloDer = MUSLO_MIN * DEG_TO_RAD;
+    temp1->anguloMusloIzq = MUSLO_MAX * DEG_TO_RAD * 0.3;
+    Keyframe* kf1_3 = crearKeyframe(6.0, temp1);
+    agregarKeyframe(&animaciones[1], kf1_3);
+
+    // Keyframe 4
+    temp1->posX = 0.0;
+    temp1->anguloMusloDer = MUSLO_MAX * DEG_TO_RAD * 0.3;
+    temp1->anguloMusloIzq = MUSLO_MIN * DEG_TO_RAD;
+    Keyframe* kf1_4 = crearKeyframe(9.0, temp1);
+    agregarKeyframe(&animaciones[1], kf1_4);
+
+    // Keyframe 5:
+    temp1->posX = -0.4;
+    temp1->anguloMusloDer = MUSLO_MIN * DEG_TO_RAD;
+    temp1->anguloMusloIzq = MUSLO_MAX * DEG_TO_RAD * 0.3;
+    Keyframe* kf1_5 = crearKeyframe(12.0, temp1);
+    agregarKeyframe(&animaciones[1], kf1_5);
+
+    eliminarPersonaje(temp1);
+    
+    // ANIMACIÓN 4: Rebeca saluda (para escena 2)
+    Personaje* temp4 = crearPersonaje("Temp", 0.0, 0.0, 1.0, 0.2, 0.4, 0.9, 0);
+    
+    // Keyframe 1: Brazos abajo (0 segundos)
+    temp4->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
+    temp4->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
+    Keyframe* kf4_1 = crearKeyframe(0.0, temp4);
+    agregarKeyframe(&animaciones[4], kf4_1);
+    
+    // Keyframe 2: Saluda con brazo derecho (1.5 segundos)
+    temp4->anguloBrazoDer = BRAZO_MAX * DEG_TO_RAD * 0.7;
+    temp4->anguloAntebrazoDer = ANTEBRAZO_MAX * DEG_TO_RAD * 0.5;
+    Keyframe* kf4_2 = crearKeyframe(1.5, temp4);
+    agregarKeyframe(&animaciones[4], kf4_2);
+    
+    // Keyframe 3: Baja brazo derecho (3 segundos)
+    temp4->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
+    temp4->anguloAntebrazoDer = ANTEBRAZO_MIN * DEG_TO_RAD;
+    Keyframe* kf4_3 = crearKeyframe(3.0, temp4);
+    agregarKeyframe(&animaciones[4], kf4_3);
+    
+    // Keyframe 4: Saluda con brazo izquierdo (4.5 segundos)
+    temp4->anguloBrazoIzq = BRAZO_MAX * DEG_TO_RAD * 0.7;
+    temp4->anguloAntebrazoIzq = ANTEBRAZO_MAX * DEG_TO_RAD * 0.5;
+    Keyframe* kf4_4 = crearKeyframe(4.5, temp4);
+    agregarKeyframe(&animaciones[4], kf4_4);
+    
+    // Keyframe 5: Baja brazo izquierdo (6 segundos)
+    temp4->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
+    temp4->anguloAntebrazoIzq = ANTEBRAZO_MIN * DEG_TO_RAD;
+    Keyframe* kf4_5 = crearKeyframe(6.0, temp4);
+    agregarKeyframe(&animaciones[4], kf4_5);
+    
+    eliminarPersonaje(temp4);
+    
+    animaciones_inicializadas = 1;
+
+}
+
+// IMPLEMENTACIÓN DE COLAS
+
+// Encolar una escena al final de la cola
+void encolarEscena(int num, float inicio, float fin, char* nombre, void (*func)(void)) {
+    Escena* nueva = (Escena*)malloc(sizeof(Escena));
+    if(nueva == NULL) {
+        return;
+    }
+    
+    nueva->numero = num;
+    nueva->duracionInicio = inicio;
+    nueva->duracionFin = fin;
+    strcpy(nueva->nombre, nombre);
+    nueva->renderizar = func;
+    nueva->siguiente = NULL;
+    
+    // Si la cola está vacía
+    if(colaEscenas.frente == NULL) {
+        colaEscenas.frente = nueva;
+        colaEscenas.final = nueva;
+    } 
+    // Si ya hay escenas
+    else {
+        colaEscenas.final->siguiente = nueva;
+        colaEscenas.final = nueva;
+    }
+    
+    colaEscenas.totalEscenas++;
+}
+
+// Liberar toda la cola
+void liberarCola() {
+    Escena* actual = colaEscenas.frente;
+    while(actual != NULL) {
+        Escena* siguiente = actual->siguiente;
+        free(actual);
+        actual = siguiente;
+    }
+    colaEscenas.frente = NULL;
+    colaEscenas.final = NULL;
+    colaEscenas.totalEscenas = 0;
+}
+
+// Renderizar la escena correspondiente al tiempo actual
+void renderizarEscenaActual() {
+    Escena* actual = colaEscenas.frente;
+    float t = colaEscenas.tiempoTotal;
+    
+    while(actual != NULL) {
+        if(t >= actual->duracionInicio && t < actual->duracionFin) {
+            escena_actual = actual->numero;
+            
+            if(actual->renderizar != NULL) {
+                actual->renderizar();
+            }
+            return;
+        }
+        actual = actual->siguiente;
+    }
+    
+    colaEscenas.tiempoTotal = 0.0;
+    tiempo_total = 0.0;
+    escena_actual = 1;
+    alpha_texto = 0.0;
+    fantasma_x = -0.8;
+    fantasma_oscilacion = 0.0;
+    fantasma_escala_inicio = 0.3;
+    fantasma_acercamiento = -1.2;
+    
+    for(int i = 0; i < numPersonajes; i++) {
+        animaciones[i].tiempoAnimacion = 0.0;
+    }
+}
+
+
+void escena1_presentacion() {
+    if(texturas_cargadas > 0 && texInicioMictlan.data != NULL) {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaInicioMictlan);
+    }    
+   
+    float offset_y = sin(fantasma_oscilacion) * 0.06;
+    dibujarFantasma(fantasma_x, fantasma_y + offset_y, fantasma_escala_inicio);
+    
+    
+    if(alpha_texto > 0.3) {
+        glColor3f(1.0, 1.0, 1.0);
+        glRasterPos2f(-0.90, -0.80);//(X,Y)
+        char texto1[] = "Juntos de nuevo,";
+        for(int i = 0; texto1[i] != '\0'; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, texto1[i]);
+        }
+        
+        glRasterPos2f(-0.90, -0.88);
+        char texto2[] = "aunque sea un ratito";
+        for(int i = 0; texto2[i] != '\0'; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, texto2[i]);
+        }
+    }
+}
+
+
+
+void escena2_altar() {
+    if(texturas_cargadas >= 2 && texFondoSala.data != NULL) {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoSala);
+    }
+    
+    if(texturas_cargadas >= 3 && texAltar.data != NULL) {
+        float altar_ancho = 0.7;
+        float altar_alto = 0.65; 
+        float altar_x = -altar_ancho / 2.0;
+        float altar_y = -0.5;
+        
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        dibujarRectanguloTexturizado(altar_x, altar_y, altar_ancho, altar_alto, texturaAltar);
+        glDisable(GL_BLEND);
+    }
+    
+    glPushMatrix();
+        glTranslatef(0.0, -0.2, 0.0);
+        glScalef(0.9, 0.9, 1.0);
+        
+        glPushMatrix();
+            glTranslatef(-0.70, 0.0, 0.0);
+            dibujarPersonaje(personajes[0]);
+        glPopMatrix();
+        
+        glPushMatrix();
+            glTranslatef(-0.25, 0.0, 0.0);
+            dibujarPersonaje(personajes[1]);
+        glPopMatrix();
+        
+        glPushMatrix();
+            glTranslatef(0.25, 0.0, 0.0);
+            double temp2_brazoDer = personajes[2]->anguloBrazoDer;
+            double temp2_antebrazoDer = personajes[2]->anguloAntebrazoDer;
+            double temp2_brazoIzq = personajes[2]->anguloBrazoIzq;
+            double temp2_antebrazoIzq = personajes[2]->anguloAntebrazoIzq;
+            
+            personajes[2]->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
+            personajes[2]->anguloAntebrazoDer = ANTEBRAZO_MIN * DEG_TO_RAD;
+            personajes[2]->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
+            personajes[2]->anguloAntebrazoIzq = ANTEBRAZO_MIN * DEG_TO_RAD;
+            
+            actualizarAngulosPersonaje(personajes[2]);
+            dibujarPersonaje(personajes[2]);
+            
+            personajes[2]->anguloBrazoDer = temp2_brazoDer;
+            personajes[2]->anguloAntebrazoDer = temp2_antebrazoDer;
+            personajes[2]->anguloBrazoIzq = temp2_brazoIzq;
+            personajes[2]->anguloAntebrazoIzq = temp2_antebrazoIzq;
+        glPopMatrix();
+        
+        glPushMatrix();
+            glTranslatef(0.70, 0.0, 0.0);
+            double temp3_brazoDer = personajes[3]->anguloBrazoDer;
+            double temp3_antebrazoDer = personajes[3]->anguloAntebrazoDer;
+            double temp3_brazoIzq = personajes[3]->anguloBrazoIzq;
+            double temp3_antebrazoIzq = personajes[3]->anguloAntebrazoIzq;
+            
+            personajes[3]->anguloBrazoDer = BRAZO_MIN * DEG_TO_RAD;
+            personajes[3]->anguloAntebrazoDer = ANTEBRAZO_MIN * DEG_TO_RAD;
+            personajes[3]->anguloBrazoIzq = BRAZO_MIN * DEG_TO_RAD;
+            personajes[3]->anguloAntebrazoIzq = ANTEBRAZO_MIN * DEG_TO_RAD;
+            
+            actualizarAngulosPersonaje(personajes[3]);
+            dibujarPersonaje(personajes[3]);
+            
+            personajes[3]->anguloBrazoDer = temp3_brazoDer;
+            personajes[3]->anguloAntebrazoDer = temp3_antebrazoDer;
+            personajes[3]->anguloBrazoIzq = temp3_brazoIzq;
+            personajes[3]->anguloAntebrazoIzq = temp3_antebrazoIzq;
+        glPopMatrix();
+        
+    glPopMatrix();
+    
+    float offset_y = sin(fantasma_oscilacion) * 0.03;
+    dibujarFantasma(0.0, -0.70 + offset_y, 2.0);
+    
+    if(alpha_texto > 0.5) {
+        glColor3f(0.0, 0.0, 0.0);
+        glRasterPos2f(-0.40, 0.85);
+        char texto[] = "Recordando juntos...";
+        for(int i = 0; texto[i] != '\0'; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, texto[i]);
+        }
+    }
+}
+void escena3_dialogo() {
+    if(texturas_cargadas >= 7 && texFondoFantasma.data != NULL) {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoFantasma);
+    } 
+
+    float offset_y = sin(fantasma_oscilacion) * 0.04;
+    dibujarFantasma(0.0, 0.0 + offset_y, 4.0);
+    
+    // Texto
+    glColor3f(1.0, 1.0, 1.0);
+    if(alpha_texto > 0.3) {
+        dibujarTexto("Que bueno volver a ver a mis chavas", -0.35, -0.6);
+    }
+}
+
+void escena4_despedida() {
+    
+     if(texturas_cargadas >= 2 && texFondoEsc4.data != NULL) {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoEsc4);
+    }
+
+    glPushMatrix();
+        glTranslatef(0.0, -0.3, 0.0); 
+        for(int i = 0; i < numPersonajes; i++) {
+            dibujarPersonaje(personajes[i]);
+        }
+
+    glPopMatrix();
+    
+    glColor3f(1.0, 1.0, 1.0);
+    if(alpha_texto > 0.3) {
+        dibujarTexto("Me encanta ponerle ofrenda,", -0.28, -0.7);
+        dibujarTexto("pero preferiria no tener que hacerlo :')", -0.38, -0.8);
+    }
+}
+
+void escena5_fantasma_decision(void) {
+    if(texturas_cargadas >= 2 && texFondoSala.data != NULL) {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoSala);
+    }
+
+    glPushMatrix();
+        glTranslatef(0.0, -0.45, 0.0);
+        glScalef(0.6, 0.6, 1.0);
+        for(int i = 0; i < numPersonajes; i++) {
+            dibujarPersonaje(personajes[i]);
+        }
+    glPopMatrix();
+    
+
+    float offset_y = sin(fantasma_oscilacion) * 0.03;
+    dibujarFantasma(fantasma_acercamiento, 0.0 + offset_y, 1.2);
+    
+    glColor3f(0.0, 0.0, 0.0);
+    if(alpha_texto > 0.3) {
+        dibujarTexto("*Quiero quedarme mas tiempo con ellas!", fantasma_acercamiento - 0.35, 0.35);
+        dibujarTexto("*Si me quedo, no creo que noten que estoy aqui!", fantasma_acercamiento - 0.45, 0.25);
+    }
+}
+
+void escena6_transicion_tiempo(void) {
+    if(texturas_cargadas >= 7 && texFondoNoche.data != NULL)  {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoNoche);
+    }
+    
+    glColor3f(1.0, 1.0, 1.0);
+    if(alpha_texto > 0.3) {
+        glRasterPos2f(0.30, 0.0);
+        char texto[] = "2 Semanas despues...";
+        for(int i = 0; texto[i] != '\0'; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, texto[i]);
+        }
+    }
+}
+
+
+void escena7_mujer_verde_cuarto(void) {
+    if(texturas_cargadas >= 4 && texfondoEsc7.data != NULL)  {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturafondoEsc7);
+    } 
+   
+    float offset_y = sin(fantasma_oscilacion) * 0.02;
+    dibujarFantasma(0.70, -0.50 + offset_y, 2.0);
+    
+    glPushMatrix();
+        glTranslatef(0.0, -0.45, 0.0);
+        glScalef(1.5, 1.5, 1.0);
+        dibujarPersonaje(personajes[3]);
+    glPopMatrix();
+    
+    glColor3f(0.2, 0.2, 0.2);
+    if(alpha_texto > 0.3) {
+        dibujarTexto("*Aun puedo sentir como si", -0.95, 0.85);
+        dibujarTexto("estuvieras aqui", -0.95, 0.78);
+    }
+}
+
+void escena8_mujer_rosa_oficina(void) {
+
+    if(texturas_cargadas >= 6 && texFondoOficina.data != NULL) {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoOficina);
+    } 
+    
+    float offset_y = sin(fantasma_oscilacion) * 0.02;
+    dibujarFantasma(-0.75, -0.60 + offset_y, 2.0);
+    
+    glPushMatrix();
+        glTranslatef(0.0, -0.45, 0.0);
+        glScalef(1.2, 1.2, 1.0);
+        dibujarPersonaje(personajes[0]);
+    glPopMatrix();
+    
+    glColor3f(0.2, 0.2, 0.2);
+    if(alpha_texto > 0.3) {
+        dibujarTexto("Se que te hubieras alegrado", -0.95, 0.85);
+        dibujarTexto("si supieras en que trabajo estoy", -0.95, 0.78);
+    }
+}
+
+void escena9_mujer_azul_graduacion(void) {
+    if(texturas_cargadas >= 5) {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoGraduacion);
+    } 
+    
+    float offset_y = sin(fantasma_oscilacion) * 0.02;
+    dibujarFantasma(-0.50, -0.40 + offset_y, 0.65);
+    
+    glPushMatrix();
+        glTranslatef(0.0, -0.25, 0.0);    
+        glScalef(1.2, 1.2, 1.0);          
+        dibujarPersonaje(personajes[2]);  
+    glPopMatrix();
+    
+    glColor3f(1.0, 1.0, 1.0);
+    if(alpha_texto > 0.3) {
+        dibujarTexto("Que daria por que", -0.95, 0.85);
+        dibujarTexto("estuvieras aqui", -0.95, 0.78);
+    }
+}
+
+void escena10_mujer_morado_computadora(void) {
+    if(texturas_cargadas >= 4 && texFondoCuarto.data != NULL)  {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoCuarto);
+    } 
+    float offset_y = sin(fantasma_oscilacion) * 0.02;
+    dibujarFantasma(-0.55, -0.45 + offset_y, 2.0);
+    
+    glPushMatrix();
+        glTranslatef(0.05, -0.45, 0.0);
+        glScalef(1.2, 1.2, 1.0);
+        dibujarPersonaje(personajes[0]);
+    glPopMatrix();
+    
+    glColor3f(0.2, 0.2, 0.2);
+    if(alpha_texto > 0.3) {
+        dibujarTexto("Nunca entendiste que estudiaba", -0.95, 0.85);
+        dibujarTexto("pero se que estabas feliz por mi", -0.95, 0.78);
+    }
+}
+
+
+void escena11_transicion_navidad(void) {
+    if(texturas_cargadas >= 2) {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoNoche);
+    }
+    
+    glColor3f(1.0, 1.0, 1.0);
+    if(alpha_texto > 0.3) {
+        glRasterPos2f(0.25, 0.0);
+        char texto[] = "1 Semana despues...";
+        for(int i = 0; texto[i] != '\0'; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, texto[i]);
+        }
+    }
+}
+
+void escena12_navidad_recuerdos(void) {
+    if(texturas_cargadas >= 6 && texFondoArbol.data != NULL) {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoArbol);
+    } 
+    
+    float offset_y = sin(fantasma_oscilacion) * 0.03;
+    dibujarFantasma(0.0, -0.2 + offset_y, 1.0);
+    
+    glPushMatrix();
+        glTranslatef(0.0, -0.45, 0.0);
+        glScalef(0.7, 0.7, 1.0);
+        
+        glPushMatrix();
+            glTranslatef(-0.68, 0.0, 0.0);
+            dibujarPersonaje(personajes[0]); // Rubi (morada)
+        glPopMatrix();
+        
+        glPushMatrix();
+            glTranslatef(-0.28, 0.0, 0.0);
+            dibujarPersonaje(personajes[1]); // Roxana (roja)
+        glPopMatrix();
+        
+        glPushMatrix();
+            glTranslatef(0.12, 0.0, 0.0);
+            dibujarPersonaje(personajes[2]); // Rebeca (azul)
+        glPopMatrix();
+        
+        glPushMatrix();
+            glTranslatef(-0.48, 0.0, 0.0);
+            dibujarPersonaje(personajes[3]); // Renata (verde)
+        glPopMatrix();
+    glPopMatrix();
+    
+    glColor3f(0.2, 0.2, 0.2);
+    if(alpha_texto > 0.3) {
+        dibujarTexto("Se acuerdan cuando los 5 fuimos", -0.95, 0.75);
+        dibujarTexto("a ese viaje a la playa?", -0.95, 0.68);
+    }
+    
+    if(alpha_texto > 0.6) {
+        dibujarTexto("Ay siii, fue el mejor viaje,", -0.95, 0.55);
+        dibujarTexto("en especial porque el estaba", -0.95, 0.48);
+    }
+}
+
+void escena13_cena_navidad(void) {
+   if(texturas_cargadas >= 10 && texFondoCenaNavidad.data != NULL) {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoCenaNavidad);
+    } 
+
+    float offset_y = sin(fantasma_oscilacion) * 0.02;
+    dibujarFantasma(-0.8, -0.75 + offset_y, 1.5);
+    
+    glPushMatrix();
+        glTranslatef(0.0, -0.40, 0.0);
+        glScalef(0.8, 0.8, 1.0);
+        
+        glPushMatrix();
+            glTranslatef(-0.55, 0.0, 0.0);
+            dibujarPersonaje(personajes[0]); // Rubi
+        glPopMatrix();
+        
+        glPushMatrix();
+            glTranslatef(-0.20, 0.0, 0.0);
+            dibujarPersonaje(personajes[1]); // Roxana
+        glPopMatrix();
+        
+        glPushMatrix();
+            glTranslatef(0.20, 0.0, 0.0);
+            dibujarPersonaje(personajes[2]); // Rebeca
+        glPopMatrix();
+        
+        glPushMatrix();
+            glTranslatef(0.55, 0.0, 0.0);
+            dibujarPersonaje(personajes[3]); // Renata
+        glPopMatrix();
+    glPopMatrix();
+    
+    glColor3f(0.2, 0.2, 0.2);
+    if(alpha_texto > 0.2) {
+        dibujarTexto("*Que rico quedo el espagueti!", -0.95, 0.65);
+    }
+    if(alpha_texto > 0.4) {
+        dibujarTexto("*La pierna tambien nos quedó genial", -0.95, 0.55);
+    }
+    if(alpha_texto > 0.6) {
+        dibujarTexto("*No sienten una calidez como si", -0.95, 0.45);
+        dibujarTexto("el estuviera aqui?", -0.95, 0.38);
+    }
+}
+
+void escena14_fantasma_despedida(void) {
+    
+    if(texturas_cargadas >= 6 && texFondoArbol.data != NULL) {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturaFondoArbol);
+    } 
+
+    float offset_y = sin(fantasma_oscilacion) * 0.04;
+    dibujarFantasma(0.0, 0.0 + offset_y, 4.0);
+    
+    dibujarGorroNavidad(0.0, 0.35 + offset_y, 4.0);
+    
+    glColor3f(0.0, 0.0, 0.0);
+    if(alpha_texto > 0.3) {
+        glRasterPos2f(-0.35, -0.55);
+        char mensaje[] = "Este siempre sera nuestro dia";
+        for(int i = 0; mensaje[i] != '\0'; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, mensaje[i]);
+        }
+    }
+    
+    // Corazones flotando
+    if(alpha_texto > 0.5) {
+        glColor3f(1.0, 0.3, 0.5);
+        for(int i = 0; i < 6; i++) {
+            float x = -0.6 + i * 0.25;
+            float y = -0.75 + sin(tiempo_total * 2 + i) * 0.08;
+            
+            // Corazón simple
+            dibujarCirculo(x - 0.02, y + 0.02, 0.025, 15);
+            dibujarCirculo(x + 0.02, y + 0.02, 0.025, 15);
+            glBegin(GL_TRIANGLES);
+                glVertex2f(x - 0.04, y + 0.01);
+                glVertex2f(x + 0.04, y + 0.01);
+                glVertex2f(x, y - 0.04);
+            glEnd();
+        }
+    }
+}
+
+void escena15_despedida_hijas(void) {
+    if(texturas_cargadas >= 4 && texfondoEsc7.data != NULL)  {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturafondoEsc7);
+    } 
+    
+    float offset_y = sin(fantasma_oscilacion) * 0.03;
+    dibujarFantasma(0.0, 0.55 + offset_y, 1.5);
+    
+    glPushMatrix();
+        glTranslatef(0.0, -0.20, 0.0);
+        glScalef(0.9, 0.9, 1.0);
+        
+        glPushMatrix();
+            glTranslatef(-0.65, 0.0, 0.0);
+            dibujarPersonaje(personajes[0]); // Rubi
+        glPopMatrix();
+        
+        glPushMatrix();
+            glTranslatef(-0.22, 0.0, 0.0);
+            dibujarPersonaje(personajes[1]); // Roxana
+        glPopMatrix();
+        
+        glPushMatrix();
+            glTranslatef(0.22, 0.0, 0.0);
+            dibujarPersonaje(personajes[2]); // Rebeca
+        glPopMatrix();
+        
+        glPushMatrix();
+            glTranslatef(0.65, 0.0, 0.0);
+            dibujarPersonaje(personajes[3]); // Renata
+        glPopMatrix();
+    glPopMatrix();
+    
+    glColor3f(0.0, 0.0, 0.0);
+    if(alpha_texto > 0.2) {
+        dibujarTexto("*Pa sabemos que estas aqui con nosotras,", -0.95, 0.90);
+        dibujarTexto("debes de irte", -0.95, 0.85);
+    }
+    if(alpha_texto > 0.4) {
+        dibujarTexto("*Estaremos bien, aunque te extranemos,", -0.95, 0.70);
+        dibujarTexto("tu ya no debes de estar aqui", -0.95, 0.65);
+    }
+    if(alpha_texto > 0.6) {
+        dibujarTexto("*Te amaremos por siempre", -0.95, 0.50);
+    }
+    
+    if(alpha_texto > 0.8) {
+        glColor3f(0.0, 0.0, 0.0);
+        glRasterPos2f(-0.25, 0.38);
+        char respuesta[] = "Las amare por siempre";
+        for(int i = 0; respuesta[i] != '\0'; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, respuesta[i]);
+        }
+    }
+}
+
+void escena16_camino_mictlan(void) {
+   if(texturas_cargadas >= 9 && texcaminoMictlan.data != NULL) {
+        dibujarRectanguloTexturizado(-1.0, -1.0, 2.0, 2.0, texturacaminoMictlan);
+    } 
+    
+    
+    float offset_y = sin(fantasma_oscilacion) * 0.02;
+    float escala_fantasma = 0.8 - (fantasma_acercamiento * 0.3);
+   float pos_y = -0.15 + offset_y + (2.5 - fantasma_alejamiento) * 0.2;
+    
+    dibujarFantasma(0.0, pos_y, fantasma_alejamiento);
+    
+    if(alpha_texto > 0.5) {
+        glColor3f(1.0, 0.9, 0.7);
+        glRasterPos2f(-0.48, -0.85);
+        char texto[] = "Hasta que nos volvamos a encontrar...";
+        for(int i = 0; texto[i] != '\0'; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, texto[i]);
+        }
+    }
+}
+
+
+
+void inicializarEscenas() {
+
+    encolarEscena(1, 0.0, 10.0, "Fantasma llegando", &escena1_presentacion);
+    encolarEscena(2, 10.0, 25.0, "Altar de muertos", &escena2_altar);
+    encolarEscena(3, 25.0, 35.0, "Fantasma habla", &escena3_dialogo);
+    encolarEscena(4, 35.0, 45.0, "Mujeres hablan", &escena4_despedida);
+    encolarEscena(5, 45.0, 55.0, "Fantasma decision", &escena5_fantasma_decision);
+    
+    encolarEscena(6, 55.0, 60.0, "2 semanas despues...", &escena6_transicion_tiempo);
+    
+    encolarEscena(7, 60.0, 70.0, "Mujer verde cuarto", &escena7_mujer_verde_cuarto);
+    encolarEscena(8, 70.0, 80.0, "Mujer rosa oficina", &escena8_mujer_rosa_oficina);
+    encolarEscena(9, 80.0, 90.0, "Mujer azul graduacion", &escena9_mujer_azul_graduacion);
+    encolarEscena(10, 90.0, 100.0, "Mujer morado computadora", &escena10_mujer_morado_computadora);
+    
+    encolarEscena(11, 100.0, 105.0, "1 semana despues...", &escena11_transicion_navidad);
+    
+    encolarEscena(12, 105.0, 125.0, "Navidad recuerdos", &escena12_navidad_recuerdos);
+    encolarEscena(13, 125.0, 145.0, "Cena navidad", &escena13_cena_navidad);
+    
+    encolarEscena(14, 145.0, 157.0, "Fantasma despedida", &escena14_fantasma_despedida);
+    encolarEscena(15, 157.0, 169.0, "Hijas despedida", &escena15_despedida_hijas);
+    encolarEscena(16, 169.0, 180.0, "Camino Mictlan", &escena16_camino_mictlan);
+}
+
+unsigned char* cargarBMP(const char* filename, int* width, int* height) {
+    FILE* file;
+    unsigned char header[54];
+    unsigned int dataPos;
+    unsigned int imageSize;
+    unsigned char* data;
+    int padding;
+    int row;
+
+    // Abrir archivo
+    file = fopen(filename, "rb");
+    if (!file) {
+        return NULL;
+    }
+
+    // Leer header (54 bytes)
+    if (fread(header, 1, 54, file) != 54) {
+        fclose(file);
+        return NULL;
+    }
+
+    // Verificar que sea BMP
+    if (header[0] != 'B' || header[1] != 'M') {
+        fclose(file);
+        return NULL;
+    }
+
+    // Leer información del header
+    dataPos = *(int*)&(header[0x0A]);
+    imageSize = *(int*)&(header[0x22]);
+    *width = *(int*)&(header[0x12]);
+    *height = *(int*)&(header[0x16]);
+
+    // Verificar profundidad de bits (debe ser 24 bits)
+    unsigned short bitsPerPixel = *(unsigned short*)&(header[0x1C]);
+    if (bitsPerPixel != 24) {
+        fclose(file);
+        return NULL;
+    }
+
+    // Calcular padding (las filas BMP son múltiplos de 4 bytes)
+    padding = (4 - ((*width) * 3) % 4) % 4;
+    
+    // Calcular tamaño real con padding
+    int rowSize = (*width) * 3 + padding;
+    imageSize = rowSize * (*height);
+    
+    if (dataPos == 0) dataPos = 54;
+
+    // Crear buffer para la imagen SIN padding
+    data = (unsigned char*)malloc((*width) * (*height) * 3);
+    if (!data) {
+        fclose(file);
+        return NULL;
+    }
+
+    // Leer datos fila por fila, eliminando el padding
+    fseek(file, dataPos, SEEK_SET);
+    unsigned char* rowBuffer = (unsigned char*)malloc(rowSize);
+    
+    for (row = 0; row < *height; row++) {
+        fread(rowBuffer, 1, rowSize, file);
+        memcpy(data + row * (*width) * 3, rowBuffer, (*width) * 3);
+    }
+    
+    free(rowBuffer);
+    fclose(file);
+    return data;
+}
+
+void inicializarTexturas() {
+    glEnable(GL_TEXTURE_2D);
+    texInicioMictlan.data = cargarBMP("inicio_mictlan.bmp", &texInicioMictlan.width, &texInicioMictlan.height);    
+    if (texInicioMictlan.data != NULL) {
+        glGenTextures(1, &texturaInicioMictlan);
+        glBindTexture(GL_TEXTURE_2D, texturaInicioMictlan);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texInicioMictlan.width, texInicioMictlan.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texInicioMictlan.data);
+        texturas_cargadas++;
+    } 
+    texFondoSala.data = cargarBMP("FondoSala.bmp", &texFondoSala.width, &texFondoSala.height);    
+    if (texFondoSala.data != NULL) {
+        glGenTextures(1, &texturaFondoSala);
+        glBindTexture(GL_TEXTURE_2D, texturaFondoSala);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texFondoSala.width, texFondoSala.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texFondoSala.data);
+        texturas_cargadas++;
+    } 
+
+    texAltar.data = cargarBMP("altar.bmp", &texAltar.width, &texAltar.height); 
+    if (texAltar.data != NULL) {
+        glGenTextures(1, &texturaAltar);
+        glBindTexture(GL_TEXTURE_2D, texturaAltar);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texAltar.width, texAltar.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texAltar.data);
+        texturas_cargadas++;
+    
+    }
+    texFondoCuarto.data = cargarBMP("FondoCuarto.bmp", &texFondoCuarto.width, &texFondoCuarto.height);
+    if (texFondoCuarto.data != NULL) {
+        glGenTextures(1, &texturaFondoCuarto);
+        glBindTexture(GL_TEXTURE_2D, texturaFondoCuarto);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texFondoCuarto.width, texFondoCuarto.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texFondoCuarto.data);
+        texturas_cargadas++;
+    } 
+
+    texFondoGraduacion.data = cargarBMP("FondoGraduacion.bmp", &texFondoGraduacion.width, &texFondoGraduacion.height);
+    
+    if (texFondoGraduacion.data != NULL) {
+        glGenTextures(1, &texturaFondoGraduacion);
+        glBindTexture(GL_TEXTURE_2D, texturaFondoGraduacion);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texFondoGraduacion.width, texFondoGraduacion.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texFondoGraduacion.data);
+        texturas_cargadas++;
+    } 
+
+    texFondoOficina.data = cargarBMP("FondoOficina.bmp", &texFondoOficina.width, &texFondoOficina.height);
+    if (texFondoOficina.data != NULL) {
+        glGenTextures(1, &texturaFondoOficina);
+        glBindTexture(GL_TEXTURE_2D, texturaFondoOficina);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texFondoOficina.width, texFondoOficina.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texFondoOficina.data);
+        texturas_cargadas++;
+    } 
+
+    texFondoNoche.data = cargarBMP("FondoNoche.bmp", &texFondoNoche.width, &texFondoNoche.height);
+    if (texFondoNoche.data != NULL) {
+        glGenTextures(1, &texturaFondoNoche);
+        glBindTexture(GL_TEXTURE_2D, texturaFondoNoche);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texFondoNoche.width, texFondoNoche.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texFondoNoche.data);
+        texturas_cargadas++;
+    } 
+    texFondoFantasma.data = cargarBMP("FondoFantasma.bmp", &texFondoFantasma.width, &texFondoFantasma.height);
+    
+    if (texFondoFantasma.data != NULL) {
+        glGenTextures(1, &texturaFondoFantasma);
+        glBindTexture(GL_TEXTURE_2D, texturaFondoFantasma);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texFondoFantasma.width, texFondoFantasma.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texFondoFantasma.data);
+        texturas_cargadas++;
+    } 
+
+    texcaminoMictlan.data = cargarBMP("caminoMictlan.bmp", &texcaminoMictlan.width, &texcaminoMictlan.height);
+    
+    if (texcaminoMictlan.data != NULL) {
+        glGenTextures(1, &texturacaminoMictlan);
+        glBindTexture(GL_TEXTURE_2D, texturacaminoMictlan);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texcaminoMictlan.width, texcaminoMictlan.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texcaminoMictlan.data);
+        texturas_cargadas++;
+    } 
+
+     texFondoCenaNavidad.data = cargarBMP("FondoCenaNavidad.bmp", &texFondoCenaNavidad.width, &texFondoCenaNavidad.height);
+    
+    if (texFondoCenaNavidad.data != NULL) {
+        glGenTextures(1, &texturaFondoCenaNavidad);
+        glBindTexture(GL_TEXTURE_2D, texturaFondoCenaNavidad);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texFondoCenaNavidad.width, texFondoCenaNavidad.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texFondoCenaNavidad.data);
+        texturas_cargadas++;
+    } 
+
+    texFondoArbol.data = cargarBMP("FondoArbol.bmp", &texFondoArbol.width, &texFondoArbol.height);
+    
+    if (texFondoArbol.data != NULL) {
+        glGenTextures(1, &texturaFondoArbol);
+        glBindTexture(GL_TEXTURE_2D, texturaFondoArbol);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texFondoArbol.width, texFondoArbol.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texFondoArbol.data);
+        texturas_cargadas++;
+    } 
+
+    texFondoEsc4.data = cargarBMP("FondoEsc4.bmp", &texFondoEsc4.width, &texFondoEsc4.height);
+    
+    if (texFondoEsc4.data != NULL) {
+        glGenTextures(1, &texturaFondoEsc4);
+        glBindTexture(GL_TEXTURE_2D, texturaFondoEsc4);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texFondoEsc4.width, texFondoEsc4.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texFondoEsc4.data);
+        texturas_cargadas++;
+    } 
+
+    texfondoEsc7.data = cargarBMP("fondoEsc7.bmp", &texfondoEsc7.width, &texfondoEsc7.height);
+
+
+    if (texfondoEsc7.data != NULL) {
+        glGenTextures(1, &texturafondoEsc7);
+        glBindTexture(GL_TEXTURE_2D, texturafondoEsc7);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texfondoEsc7.width, texfondoEsc7.height, 0, GL_BGR_EXT, GL_UNSIGNED_BYTE, texfondoEsc7.data);
+        texturas_cargadas++;
+    } 
+
+    glDisable(GL_TEXTURE_2D);
+
+}
+
+void dibujarRectanguloTexturizado(float x, float y, float ancho, float alto, GLuint textura) {
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, textura);
+    
+    glColor3f(1.0, 1.0, 1.0);  
+    glBegin(GL_QUADS);
+        glTexCoord2f(0.0, 0.0); glVertex2f(x, y);
+        glTexCoord2f(1.0, 0.0); glVertex2f(x + ancho, y);
+        glTexCoord2f(1.0, 1.0); glVertex2f(x + ancho, y + alto);
+        glTexCoord2f(0.0, 1.0); glVertex2f(x, y + alto);
+    glEnd();
+    
+    glDisable(GL_TEXTURE_2D);
+}
+
+
 int main(int argc, char** argv) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
     
-    glutInitWindowSize(1200, 900);
+    glutInitWindowSize(900, 650);//tam de la ventana
     glutInitWindowPosition(100, 50);
     ventana_principal = glutCreateWindow("Personajes chavas");
     
     glClearColor(0.85, 0.9, 0.95, 1.0); 
-    
+    inicializarTexturas();  // Cargar texturas al inici
     //ejemplos de los personajes
-    personajes[numPersonajes++] = crearPersonaje("Rubi", 0.0, 0.0, 1.0, 0.55, 0.25, 0.85, 1);
-    personajes[numPersonajes++] = crearPersonaje("Roxana", -0.6, 0.0, 0.8, 0.9, 0.2, 0.3, 2);
-    personajes[numPersonajes++] = crearPersonaje("Rebeca", 0.6, 0.0, 0.8, 0.2, 0.4, 0.9, 3);
+    personajes[numPersonajes++] = crearPersonaje("Rubi", 0.0, 0.0, 1.0, 0.55, 0.25, 0.85, 0);
+    personajes[numPersonajes++] = crearPersonaje("Roxana", -0.6, 0.0, 0.8, 0.9, 0.2, 0.3, 0);
+    personajes[numPersonajes++] = crearPersonaje("Rebeca", 0.6, 0.0, 0.8, 0.2, 0.4, 0.9, 0);
     personajes[numPersonajes++] = crearPersonaje("Renata", -0.4, 0.3, 0.5, 0.3, 0.8, 0.4, 0);
     
     // Registrar callbacks
@@ -927,7 +2175,7 @@ int main(int argc, char** argv) {
     glutKeyboardFunc(teclado);
     
     // ventana de menu 
-    glutInitWindowSize(350, 700);
+    glutInitWindowSize(300, 550);
     glutInitWindowPosition(1160, 100);
     ventana_menu = glutCreateWindow("Menu ");
     glClearColor(0.1, 0.1, 0.15, 1.0);
@@ -935,8 +2183,13 @@ int main(int argc, char** argv) {
     glutKeyboardFunc(tecladoMenu);
     glutSpecialFunc(tecladoEspecialMenu);
     
-
+    printf("\nCONTROLES:\n");
+    printf("  ESPACIO - Pausar/Reanudar\n");
+    printf("  R - Reiniciar animacion\n");
+    printf("  M - Mostrar/Ocultar menu\n");
+    printf("  ESC - Salir\n");
     
     glutMainLoop();
     return 0;
 }
+
